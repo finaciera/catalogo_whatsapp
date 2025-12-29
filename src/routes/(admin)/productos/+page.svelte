@@ -1,5 +1,5 @@
 <!-- src/routes/(admin)/productos/+page.svelte -->
-<!--revisar productos-->
+<!-- CORREGIDO: Rutas API y ciclo infinito -->
 <script>
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
@@ -30,18 +30,33 @@
   async function loadData() {
     try {
       loading = true;
+      error = ''; // Limpiar errores previos
       
+      // ✅ CORRECCIÓN: Rutas API con slash inicial
       const [resProductos, resCategorias] = await Promise.all([
-        fetch('api/productos'),
-        fetch('api/categorias')
+        fetch('/api/productos'),
+        fetch('/api/categorias')
       ]);
       
-      if (resProductos.ok) productos = await resProductos.json();
-      if (resCategorias.ok) categorias = await resCategorias.json();
+      if (resProductos.ok) {
+        const data = await resProductos.json();
+        productos = Array.isArray(data) ? data : [];
+      } else {
+        throw new Error('Error al cargar productos');
+      }
+      
+      if (resCategorias.ok) {
+        const result = await resCategorias.json();
+        categorias = result.success ? result.data : [];
+      } else {
+        throw new Error('Error al cargar categorías');
+      }
       
     } catch (err) {
-      error = 'Error al cargar los datos';
+      error = 'Error al cargar los datos: ' + err.message;
       console.error(err);
+      productos = [];
+      categorias = [];
     } finally {
       loading = false;
     }
@@ -49,7 +64,7 @@
   
   async function toggleActivo(producto) {
     try {
-      const res = await fetch('api/productos', {
+      const res = await fetch('/api/productos', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -74,7 +89,7 @@
     if (!productoToDelete) return;
     
     try {
-      const res = await fetch(`api/productos?id=${productoToDelete.id}`, {
+      const res = await fetch(`/api/productos?id=${productoToDelete.id}`, {
         method: 'DELETE'
       });
       
@@ -145,15 +160,15 @@
       <p class="mt-1 text-sm text-gray-600">Gestiona tu catálogo de productos</p>
     </div>
     
-    <button
-      on:click={() => goto('/dashboard/productos/nuevo')}
+    <a
+      href="/productos/nuevo"
       class="inline-flex items-center justify-center px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
     >
       <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
       </svg>
       Nuevo Producto
-    </button>
+    </a>
   </div>
 
   <!-- Mensajes -->
@@ -209,21 +224,19 @@
       </div>
       
       <!-- Estado -->
-      <div class="flex gap-2">
-        <div class="flex-1">
-          <label for="activo" class="block text-sm font-medium text-gray-700 mb-1">
-            Estado
-          </label>
-          <select
-            id="activo"
-            bind:value={filterActivo}
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          >
-            <option value="">Todos</option>
-            <option value="true">Activos</option>
-            <option value="false">Inactivos</option>
-          </select>
-        </div>
+      <div>
+        <label for="activo" class="block text-sm font-medium text-gray-700 mb-1">
+          Estado
+        </label>
+        <select
+          id="activo"
+          bind:value={filterActivo}
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+        >
+          <option value="">Todos</option>
+          <option value="true">Activos</option>
+          <option value="false">Inactivos</option>
+        </select>
       </div>
     </div>
     
@@ -267,17 +280,19 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
       </svg>
       <h3 class="mt-2 text-sm font-medium text-gray-900">No hay productos</h3>
-      <p class="mt-1 text-sm text-gray-500">Comienza creando tu primer producto</p>
+      <p class="mt-1 text-sm text-gray-500">
+        {productos.length === 0 ? 'Comienza creando tu primer producto' : 'No se encontraron productos con los filtros aplicados'}
+      </p>
       <div class="mt-6">
-        <button
-          on:click={() => goto('/dashboard/productos/nuevo')}
+        <a
+          href="/productos/nuevo"
           class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700"
         >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
           Nuevo Producto
-        </button>
+        </a>
       </div>
     </div>
   {:else if viewMode === 'table'}
@@ -350,15 +365,15 @@
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div class="flex items-center justify-end gap-2">
-                    <button
-                      on:click={() => goto(`/dashboard/productos/${producto.id}/editar`)}
+                    <a
+                      href="/productos/{producto.id}/editar"
                       class="text-indigo-600 hover:text-indigo-900"
                       title="Editar"
                     >
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                       </svg>
-                    </button>
+                    </a>
                     <button
                       on:click={() => confirmDelete(producto)}
                       class="text-red-600 hover:text-red-900"
@@ -421,12 +436,12 @@
             {/if}
             
             <div class="flex gap-2 pt-3 border-t border-gray-200">
-              <button
-                on:click={() => goto(`/dashboard/productos/${producto.id}/editar`)}
-                class="flex-1 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+              <a
+                href="/productos/{producto.id}/editar"
+                class="flex-1 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors text-center"
               >
                 Editar
-              </button>
+              </a>
               <button
                 on:click={() => confirmDelete(producto)}
                 class="px-3 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"

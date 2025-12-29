@@ -1,24 +1,94 @@
-<!-- src/lib/components/dashboard/ProductForm.svelte -->
-<!--revisar -->
+<!-- src/lib/components/forms/ProductForm.svelte -->
+<!-- FORMULARIO COMPLETO Y FUNCIONAL -->
 <script>
-  import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
+  import { onMount, createEventDispatcher } from 'svelte';
+  import { Save, X, Loader2, Upload } from 'lucide-svelte';
+  import ImageUploader from '$lib/components/ui/ImageUploader.svelte';
+
+  const dispatch = createEventDispatcher();
 
   export let producto = null;
-  export let onSuccess = null;
+  export let categorias = [];
+  export let marcas = [];
 
-  let categorias = [];
   let loading = false;
+  let loadingCategorias = false;
+  let loadingMarcas = false;
   let error = '';
   let success = '';
+  let imagePreview = '';
 
-  // Form data con valores por defecto
+  // Cargar categorías si no vienen como prop
+  onMount(async () => {
+    if (categorias.length === 0) {
+      await cargarCategorias();
+    }
+    
+    if (marcas.length === 0) {
+      await cargarMarcas();
+    }
+    
+    // Si estamos editando, inicializar formulario
+    if (producto) {
+      formData = {
+        id: producto.id,
+        nombre: producto.nombre || '',
+        descripcion_corta: producto.descripcion_corta || '',
+        descripcion_larga: producto.descripcion_larga || '',
+        precio: producto.precio?.toString() || '',
+        stock: producto.stock?.toString() || '',
+        categoria_id: producto.categoria_id?.toString() || '',
+        marca_id: producto.marca_id?.toString() || '',
+        imagen_url: producto.imagen_url || '',
+        destacado: Boolean(producto.destacado),
+        activo: producto.activo !== false,
+        slug: producto.slug || '',
+        descuento: producto.descuento?.toString() || '',
+        sku: producto.sku || ''
+      };
+      imagePreview = producto.imagen_url || '';
+    }
+  });
+
+  async function cargarCategorias() {
+    try {
+      loadingCategorias = true;
+      const res = await fetch('/api/categorias?activas=true');
+      const result = await res.json();
+      if (result.success) {
+        categorias = result.data;
+      }
+    } catch (err) {
+      console.error('Error cargando categorías:', err);
+    } finally {
+      loadingCategorias = false;
+    }
+  }
+
+  async function cargarMarcas() {
+    try {
+      loadingMarcas = true;
+      const res = await fetch('/api/marcas?activas=true');
+      const result = await res.json();
+      if (result.success) {
+        marcas = result.data;
+      }
+    } catch (err) {
+      console.error('Error cargando marcas:', err);
+    } finally {
+      loadingMarcas = false;
+    }
+  }
+
+  // Form data inicial
   let formData = {
     nombre: '',
-    descripcion: '',
+    descripcion_corta: '',
+    descripcion_larga: '',
     precio: '',
     stock: '',
     categoria_id: '',
+    marca_id: '',
     imagen_url: '',
     destacado: false,
     activo: true,
@@ -27,109 +97,51 @@
     sku: ''
   };
 
-  // Validaciones en tiempo real
-  let validationErrors = {
-    nombre: '',
-    precio: '',
-    categoria_id: ''
-  };
+  // Validaciones
+  $: nombreValido = formData.nombre.trim().length > 0;
+  $: precioValido = formData.precio && !isNaN(parseFloat(formData.precio)) && parseFloat(formData.precio) >= 0;
+  $: categoriaValida = formData.categoria_id !== '';
+  $: formularioValido = nombreValido && precioValido && categoriaValida;
 
-  onMount(async () => {
-    await loadCategorias();
-    
-    if (producto) {
-      formData = {
-        ...producto,
-        categoria_id: producto.categoria_id?.toString() || '',
-        precio: producto.precio?.toString() || '',
-        stock: producto.stock?.toString() || '',
-        descuento: producto.descuento?.toString() || '',
-        destacado: Boolean(producto.destacado),
-        activo: producto.activo !== false
-      };
-    }
-  });
-
-  async function loadCategorias() {
-    try {
-      const res = await fetch('api/categorias');
-      if (res.ok) {
-        categorias = await res.json();
-      }
-    } catch (err) {
-      console.error('Error cargando categorías:', err);
-    }
-  }
-
-  function validateField(field) {
-    validationErrors[field] = '';
-    
-    if (field === 'nombre' && !formData.nombre.trim()) {
-      validationErrors.nombre = 'El nombre es obligatorio';
-      return false;
-    }
-    
-    if (field === 'precio') {
-      const precio = parseFloat(formData.precio);
-      if (isNaN(precio) || precio < 0) {
-        validationErrors.precio = 'El precio debe ser un número válido';
-        return false;
-      }
-    }
-    
-    if (field === 'categoria_id' && !formData.categoria_id) {
-      validationErrors.categoria_id = 'Debe seleccionar una categoría';
-      return false;
-    }
-    
-    return true;
-  }
-
-  function validateForm() {
-    let isValid = true;
-    
-    isValid = validateField('nombre') && isValid;
-    isValid = validateField('precio') && isValid;
-    isValid = validateField('categoria_id') && isValid;
-    
-    return isValid;
+  // Preview de imagen
+  $: if (formData.imagen_url && formData.imagen_url !== imagePreview) {
+    imagePreview = formData.imagen_url;
   }
 
   async function handleSubmit() {
+    if (!formularioValido || loading) return;
+    
     error = '';
     success = '';
-    
-    if (!validateForm()) {
-      error = 'Por favor corrige los errores en el formulario';
-      return;
-    }
-    
     loading = true;
 
     try {
-      // Preparar datos para enviar
+      // Preparar datos
       const dataToSend = {
         nombre: formData.nombre.trim(),
-        descripcion: formData.descripcion?.trim() || null,
-        precio: formData.precio,
-        stock: formData.stock || null,
+        descripcion_corta: formData.descripcion_corta?.trim() || null,
+        descripcion_larga: formData.descripcion_larga?.trim() || null,
+        precio: parseFloat(formData.precio),
+        stock: formData.stock && formData.stock !== '' ? parseInt(formData.stock) : null,
         categoria_id: parseInt(formData.categoria_id),
+        marca_id: formData.marca_id && formData.marca_id !== '' ? parseInt(formData.marca_id) : null,
         imagen_url: formData.imagen_url?.trim() || null,
         destacado: formData.destacado,
         activo: formData.activo,
         slug: formData.slug?.trim() || null,
-        descuento: formData.descuento || null,
+        descuento: formData.descuento && formData.descuento !== '' ? parseFloat(formData.descuento) : null,
         sku: formData.sku?.trim() || null
       };
 
-      console.log('📤 Enviando datos:', dataToSend);
-
-      const url = producto ? 'api/productos' : 'api/productos';
-      const method = producto ? 'PUT' : 'POST';
-
+      // Si estamos editando, agregar el ID
       if (producto) {
         dataToSend.id = producto.id;
       }
+
+      console.log('📤 Enviando:', dataToSend);
+
+      const url = '/api/productos';
+      const method = producto ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
         method,
@@ -137,12 +149,13 @@
         body: JSON.stringify(dataToSend)
       });
 
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Error al guardar el producto');
+      }
+
       const responseData = await res.json();
       console.log('📥 Respuesta:', responseData);
-
-      if (!res.ok) {
-        throw new Error(responseData.error || 'Error al guardar el producto');
-      }
 
       success = producto 
         ? '✅ Producto actualizado correctamente'
@@ -152,10 +165,12 @@
       if (!producto) {
         formData = {
           nombre: '',
-          descripcion: '',
+          descripcion_corta: '',
+          descripcion_larga: '',
           precio: '',
           stock: '',
           categoria_id: '',
+          marca_id: '',
           imagen_url: '',
           destacado: false,
           activo: true,
@@ -163,13 +178,13 @@
           descuento: '',
           sku: ''
         };
+        imagePreview = '';
       }
 
-      if (onSuccess) {
-        setTimeout(() => onSuccess(responseData), 1000);
-      } else {
-        setTimeout(() => goto('/dashboard/productos'), 1500);
-      }
+      // Disparar evento success
+      setTimeout(() => {
+        dispatch('success', responseData);
+      }, 1000);
 
     } catch (err) {
       console.error('❌ Error:', err);
@@ -177,6 +192,21 @@
     } finally {
       loading = false;
     }
+  }
+
+  function handleCancel() {
+    dispatch('cancel');
+  }
+
+  function handleImageUpload(event) {
+    const { url } = event.detail;
+    formData.imagen_url = url;
+    imagePreview = url;
+  }
+
+  function handleImageRemove() {
+    formData.imagen_url = '';
+    imagePreview = '';
   }
 </script>
 
@@ -189,40 +219,6 @@
       </svg>
       <span>{error}</span>
     </div>
-
-  <!-- Botones de acción -->
-  <div class="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200">
-    <button
-      type="submit"
-      disabled={loading}
-      class="flex-1 sm:flex-initial px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg
-             hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2
-             disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors
-             flex items-center justify-center"
-    >
-      {#if loading}
-        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-        </svg>
-        Guardando...
-      {:else}
-        {producto ? 'Actualizar Producto' : 'Crear Producto'}
-      {/if}
-    </button>
-
-    <button
-      type="button"
-      on:click={() => goto('/dashboard/productos')}
-      disabled={loading}
-      class="px-6 py-3 bg-white text-gray-700 font-medium rounded-lg border border-gray-300
-             hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2
-             disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-    >
-      Cancelar
-    </button>
-  </div>
-</form>
   {/if}
 
   {#if success}
@@ -237,78 +233,114 @@
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
     <!-- Nombre -->
     <div class="md:col-span-2">
-      <label for="nombre" class="block text-sm font-medium text-gray-700 mb-2">
+      <label for="nombre" class="label">
         Nombre del Producto <span class="text-red-500">*</span>
       </label>
       <input
         id="nombre"
         type="text"
         bind:value={formData.nombre}
-        on:blur={() => validateField('nombre')}
         disabled={loading}
-        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent
-               {validationErrors.nombre ? 'border-red-500' : 'border-gray-300'}
-               disabled:bg-gray-100 disabled:cursor-not-allowed"
-        placeholder="Ej: Producto ejemplo"
+        class="input"
+        class:border-red-500={!nombreValido && formData.nombre.length > 0}
+        placeholder="Ej: Laptop Gamer Pro"
+        required
       />
-      {#if validationErrors.nombre}
-        <p class="mt-1 text-sm text-red-600">{validationErrors.nombre}</p>
+      {#if !nombreValido && formData.nombre.length > 0}
+        <p class="mt-1 text-sm text-red-600">El nombre es obligatorio</p>
       {/if}
     </div>
 
     <!-- Categoría -->
     <div>
-      <label for="categoria" class="block text-sm font-medium text-gray-700 mb-2">
+      <label for="categoria" class="label">
         Categoría <span class="text-red-500">*</span>
       </label>
-      <select
-        id="categoria"
-        bind:value={formData.categoria_id}
-        on:blur={() => validateField('categoria_id')}
-        disabled={loading}
-        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent
-               {validationErrors.categoria_id ? 'border-red-500' : 'border-gray-300'}
-               disabled:bg-gray-100 disabled:cursor-not-allowed"
-      >
-        <option value="">Seleccionar categoría</option>
-        {#each categorias as cat}
-          <option value={cat.id}>{cat.nombre}</option>
-        {/each}
-      </select>
-      {#if validationErrors.categoria_id}
-        <p class="mt-1 text-sm text-red-600">{validationErrors.categoria_id}</p>
+      {#if loadingCategorias}
+        <div class="input flex items-center text-gray-500">
+          <Loader2 class="w-4 h-4 animate-spin mr-2" />
+          Cargando categorías...
+        </div>
+      {:else}
+        <select
+          id="categoria"
+          bind:value={formData.categoria_id}
+          disabled={loading}
+          class="input"
+          class:border-red-500={!categoriaValida && formData.categoria_id !== ''}
+          required
+        >
+          <option value="">Seleccionar categoría</option>
+          {#each categorias as cat}
+            <option value={cat.id}>{cat.nombre}</option>
+          {/each}
+        </select>
+        {#if categorias.length === 0}
+          <p class="mt-1 text-sm text-amber-600">
+            No hay categorías. <a href="/categorias" class="underline">Crear una</a>
+          </p>
+        {/if}
+      {/if}
+    </div>
+
+    <!-- Marca -->
+    <div>
+      <label for="marca" class="label">
+        Marca
+      </label>
+      {#if loadingMarcas}
+        <div class="input flex items-center text-gray-500">
+          <Loader2 class="w-4 h-4 animate-spin mr-2" />
+          Cargando marcas...
+        </div>
+      {:else}
+        <select
+          id="marca"
+          bind:value={formData.marca_id}
+          disabled={loading}
+          class="input"
+        >
+          <option value="">Sin marca</option>
+          {#each marcas as marca}
+            <option value={marca.id}>{marca.nombre}</option>
+          {/each}
+        </select>
+        {#if marcas.length === 0}
+          <p class="mt-1 text-sm text-gray-500">
+            Opcional. <a href="/marcas/nuevo" class="text-primary-600 underline">Crear marca</a>
+          </p>
+        {/if}
       {/if}
     </div>
 
     <!-- Precio -->
     <div>
-      <label for="precio" class="block text-sm font-medium text-gray-700 mb-2">
+      <label for="precio" class="label">
         Precio <span class="text-red-500">*</span>
       </label>
       <div class="relative">
-        <span class="absolute left-3 top-2 text-gray-500">$</span>
+        <span class="absolute left-3 top-2.5 text-gray-500">$</span>
         <input
           id="precio"
           type="number"
           step="0.01"
           min="0"
           bind:value={formData.precio}
-          on:blur={() => validateField('precio')}
           disabled={loading}
-          class="w-full pl-8 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent
-                 {validationErrors.precio ? 'border-red-500' : 'border-gray-300'}
-                 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          class="input pl-8"
+          class:border-red-500={!precioValido && formData.precio !== ''}
           placeholder="0.00"
+          required
         />
       </div>
-      {#if validationErrors.precio}
-        <p class="mt-1 text-sm text-red-600">{validationErrors.precio}</p>
+      {#if !precioValido && formData.precio !== ''}
+        <p class="mt-1 text-sm text-red-600">Ingresa un precio válido</p>
       {/if}
     </div>
 
     <!-- Stock -->
     <div>
-      <label for="stock" class="block text-sm font-medium text-gray-700 mb-2">
+      <label for="stock" class="label">
         Stock
       </label>
       <input
@@ -317,15 +349,15 @@
         min="0"
         bind:value={formData.stock}
         disabled={loading}
-        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent
-               disabled:bg-gray-100 disabled:cursor-not-allowed"
+        class="input"
         placeholder="Dejar vacío si no aplica"
       />
+      <p class="mt-1 text-xs text-gray-500">Opcional: cantidad disponible</p>
     </div>
 
     <!-- SKU -->
     <div>
-      <label for="sku" class="block text-sm font-medium text-gray-700 mb-2">
+      <label for="sku" class="label">
         SKU / Código
       </label>
       <input
@@ -333,15 +365,14 @@
         type="text"
         bind:value={formData.sku}
         disabled={loading}
-        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent
-               disabled:bg-gray-100 disabled:cursor-not-allowed"
+        class="input"
         placeholder="Ej: PROD-001"
       />
     </div>
 
     <!-- Descuento -->
     <div>
-      <label for="descuento" class="block text-sm font-medium text-gray-700 mb-2">
+      <label for="descuento" class="label">
         Descuento (%)
       </label>
       <input
@@ -352,15 +383,14 @@
         max="100"
         bind:value={formData.descuento}
         disabled={loading}
-        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent
-               disabled:bg-gray-100 disabled:cursor-not-allowed"
+        class="input"
         placeholder="0"
       />
     </div>
 
     <!-- Slug -->
     <div>
-      <label for="slug" class="block text-sm font-medium text-gray-700 mb-2">
+      <label for="slug" class="label">
         Slug (URL)
       </label>
       <input
@@ -368,52 +398,52 @@
         type="text"
         bind:value={formData.slug}
         disabled={loading}
-        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent
-               disabled:bg-gray-100 disabled:cursor-not-allowed"
-        placeholder="Se genera automáticamente"
+        class="input"
+        placeholder="se-genera-automaticamente"
       />
       <p class="mt-1 text-xs text-gray-500">Dejar vacío para generar automáticamente</p>
     </div>
 
-    <!-- Imagen URL -->
+    <!-- Imagen con Upload a Cloudinary -->
     <div class="md:col-span-2">
-      <label for="imagen" class="block text-sm font-medium text-gray-700 mb-2">
-        URL de Imagen
-      </label>
-      <input
-        id="imagen"
-        type="url"
-        bind:value={formData.imagen_url}
-        disabled={loading}
-        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent
-               disabled:bg-gray-100 disabled:cursor-not-allowed"
-        placeholder="https://ejemplo.com/imagen.jpg"
+      <ImageUploader
+        bind:imageUrl={formData.imagen_url}
+        label="Imagen del Producto"
+        {disabled}
+        on:upload={handleImageUpload}
+        on:remove={handleImageRemove}
       />
-      {#if formData.imagen_url}
-        <div class="mt-3">
-          <img 
-            src={formData.imagen_url} 
-            alt="Preview" 
-            class="h-32 w-32 object-cover rounded-lg border border-gray-200"
-            on:error={(e) => e.target.src = 'https://via.placeholder.com/150?text=Error'}
-          />
-        </div>
-      {/if}
     </div>
 
-    <!-- Descripción -->
+    <!-- Descripción Corta -->
     <div class="md:col-span-2">
-      <label for="descripcion" class="block text-sm font-medium text-gray-700 mb-2">
-        Descripción
+      <label for="descripcion_corta" class="label">
+        Descripción Corta
+      </label>
+      <input
+        id="descripcion_corta"
+        type="text"
+        bind:value={formData.descripcion_corta}
+        disabled={loading}
+        class="input"
+        placeholder="Breve descripción del producto (se muestra en listados)"
+        maxlength="200"
+      />
+      <p class="mt-1 text-xs text-gray-500">Máximo 200 caracteres</p>
+    </div>
+
+    <!-- Descripción Larga -->
+    <div class="md:col-span-2">
+      <label for="descripcion_larga" class="label">
+        Descripción Detallada
       </label>
       <textarea
-        id="descripcion"
-        bind:value={formData.descripcion}
+        id="descripcion_larga"
+        bind:value={formData.descripcion_larga}
         disabled={loading}
         rows="4"
-        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent
-               disabled:bg-gray-100 disabled:cursor-not-allowed resize-none"
-        placeholder="Descripción detallada del producto..."
+        class="input resize-none"
+        placeholder="Descripción completa del producto con todos los detalles..."
       />
     </div>
 
@@ -424,9 +454,11 @@
           type="checkbox"
           bind:checked={formData.destacado}
           disabled={loading}
-          class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 disabled:cursor-not-allowed"
+          class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
         />
-        <span class="ml-2 text-sm text-gray-700">Producto destacado</span>
+        <span class="ml-2 text-sm text-gray-700 font-medium">
+          ⭐ Producto destacado
+        </span>
       </label>
 
       <label class="flex items-center cursor-pointer">
@@ -434,9 +466,59 @@
           type="checkbox"
           bind:checked={formData.activo}
           disabled={loading}
-          class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 disabled:cursor-not-allowed"
+          class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
         />
-        <span class="ml-2 text-sm text-gray-700">Producto activo</span>
+        <span class="ml-2 text-sm text-gray-700 font-medium">
+          Producto activo (visible en catálogo)
+        </span>
       </label>
     </div>
   </div>
+
+  <!-- Botones de acción -->
+  <div class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-gray-200">
+    <button
+      type="button"
+      on:click={handleCancel}
+      disabled={loading}
+      class="btn-secondary w-full sm:w-auto"
+    >
+      <X class="w-4 h-4 mr-2" />
+      Cancelar
+    </button>
+
+    <button
+      type="submit"
+      disabled={!formularioValido || loading}
+      class="btn-primary w-full sm:flex-1 flex items-center justify-center"
+    >
+      {#if loading}
+        <Loader2 class="w-5 h-5 animate-spin mr-2" />
+        Guardando...
+      {:else}
+        <Save class="w-5 h-5 mr-2" />
+        {producto ? 'Actualizar Producto' : 'Crear Producto'}
+      {/if}
+    </button>
+  </div>
+
+  <!-- Ayuda -->
+  {#if !formularioValido}
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+      <p class="text-sm text-amber-800 font-medium mb-2">
+        ⚠️ Completa los campos obligatorios:
+      </p>
+      <ul class="text-sm text-amber-700 space-y-1 ml-4">
+        {#if !nombreValido}
+          <li>• Nombre del producto</li>
+        {/if}
+        {#if !precioValido}
+          <li>• Precio válido</li>
+        {/if}
+        {#if !categoriaValida}
+          <li>• Categoría</li>
+        {/if}
+      </ul>
+    </div>
+  {/if}
+</form>

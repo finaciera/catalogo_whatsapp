@@ -1,5 +1,5 @@
 <!-- src/lib/components/dashboard/DashboardSidebar.svelte -->
-<!--revisar -->
+<!-- CORREGIDO: Logout funcionando correctamente -->
 <script>
   import { 
     LayoutDashboard, 
@@ -29,9 +29,26 @@
     { icon: Settings, label: 'Configuración', href: '/configuracion' }
   ];
   
-  function handleLogout() {
-    auth.logout();
-    goto('/login');
+  // ✅ CORRECCIÓN: Logout con async y fetch para limpiar cookies del servidor
+  async function handleLogout() {
+    try {
+      // 1. Limpiar estado local del store
+      auth.logout();
+      
+      // 2. Llamar al endpoint del servidor para limpiar cookies
+      await fetch('/logout', {
+        method: 'POST',
+        credentials: 'same-origin'
+      });
+      
+      // 3. Redirigir al login
+      await goto('/login', { replaceState: true, invalidateAll: true });
+      
+    } catch (error) {
+      console.error('Error en logout:', error);
+      // Forzar redirección aunque haya error
+      window.location.href = '/login';
+    }
   }
   
   function handleNavClick() {
@@ -95,7 +112,7 @@
           
           <!-- Tooltip para collapsed -->
           {#if collapsed}
-            <div class="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+            <div class="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
               {item.label}
             </div>
           {/if}

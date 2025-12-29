@@ -1,5 +1,5 @@
-<!-- src/routes/dashboard/(admin)/+page.svelte -->
-<!--revisar productos-->
+<!-- src/routes/(admin)/dashboard/+page.svelte -->
+<!-- CORREGIDO: Manejo correcto de respuestas API -->
 <script>
   import { onMount } from 'svelte';
 
@@ -18,6 +18,7 @@
   let pedidosRecientes = [];
   let productosPopulares = [];
   let ventasPorDia = [];
+  let error = '';
 
   onMount(async () => {
     await loadDashboardData();
@@ -26,14 +27,32 @@
   async function loadDashboardData() {
     try {
       loading = true;
+      error = '';
       
-      // Cargar productos
-      const resProductos = await fetch('/api/productos');
-      const productos = await resProductos.json();
+      // ✅ CORRECCIÓN: Manejar respuestas con estructura {success, data}
+      const [resProductos, resPedidos] = await Promise.all([
+        fetch('/api/productos'),
+        fetch('/api/pedidos')
+      ]);
       
-      // Cargar pedidos
-      const resPedidos = await fetch('/api/pedidos');
-      const pedidos = await resPedidos.json();
+      // Productos
+      let productos = [];
+      if (resProductos.ok) {
+        const dataProductos = await resProductos.json();
+        // ✅ Puede venir como array directo o como {success, data}
+        productos = Array.isArray(dataProductos) ? dataProductos : (dataProductos.data || []);
+      }
+      
+      // Pedidos
+      let pedidos = [];
+      if (resPedidos.ok) {
+        const dataPedidos = await resPedidos.json();
+        // ✅ Puede venir como array directo o como {success, data}
+        pedidos = Array.isArray(dataPedidos) ? dataPedidos : (dataPedidos.data || []);
+      }
+      
+      console.log('📊 Productos cargados:', productos.length);
+      console.log('📊 Pedidos cargados:', pedidos.length);
       
       // Calcular estadísticas
       stats.totalProductos = productos.length;
@@ -47,10 +66,10 @@
       const now = new Date();
       const primerDiaMes = new Date(now.getFullYear(), now.getMonth(), 1);
       
-      stats.totalVentas = pedidos.reduce((sum, p) => sum + (p.total || 0), 0);
+      stats.totalVentas = pedidos.reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
       stats.ventasMes = pedidos
         .filter(p => new Date(p.created_at) >= primerDiaMes)
-        .reduce((sum, p) => sum + (p.total || 0), 0);
+        .reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
       
       // Pedidos de hoy
       const hoy = new Date();
@@ -65,23 +84,23 @@
       // Productos más pedidos
       const productosCount = {};
       pedidos.forEach(pedido => {
-        if (pedido.items) {
+        if (pedido.items && Array.isArray(pedido.items)) {
           pedido.items.forEach(item => {
             if (!productosCount[item.producto_id]) {
               productosCount[item.producto_id] = {
-                nombre: item.nombre,
+                nombre: item.producto_nombre,
                 cantidad: 0,
                 total: 0
               };
             }
             productosCount[item.producto_id].cantidad += item.cantidad;
-            productosCount[item.producto_id].total += item.subtotal;
+            productosCount[item.producto_id].total += parseFloat(item.subtotal) || 0;
           });
         }
       });
       
       productosPopulares = Object.entries(productosCount)
-        .map(([id, data]) => ({ id: parseInt(id), ...data }))
+        .map(([id, data]) => ({ id, ...data }))
         .sort((a, b) => b.cantidad - a.cantidad)
         .slice(0, 5);
       
@@ -102,7 +121,7 @@
         fecha.setHours(0, 0, 0, 0);
         const key = fecha.toISOString().split('T')[0];
         if (ventasPorDiaMap.hasOwnProperty(key)) {
-          ventasPorDiaMap[key] += pedido.total || 0;
+          ventasPorDiaMap[key] += parseFloat(pedido.total) || 0;
         }
       });
       
@@ -111,8 +130,9 @@
         total
       }));
       
-    } catch (error) {
-      console.error('Error cargando datos del dashboard:', error);
+    } catch (err) {
+      console.error('Error cargando datos del dashboard:', err);
+      error = 'Error al cargar los datos del dashboard';
     } finally {
       loading = false;
     }
@@ -122,14 +142,15 @@
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency: 'MXN'
-    }).format(amount);
+    }).format(amount || 0);
   }
 
   function getEstadoColor(estado) {
     const colores = {
       'pendiente': 'bg-yellow-100 text-yellow-800',
       'confirmado': 'bg-blue-100 text-blue-800',
-      'enviado': 'bg-purple-100 text-purple-800',
+      'preparando': 'bg-purple-100 text-purple-800',
+      'enviado': 'bg-indigo-100 text-indigo-800',
       'entregado': 'bg-green-100 text-green-800',
       'cancelado': 'bg-red-100 text-red-800'
     };
@@ -140,6 +161,7 @@
     const textos = {
       'pendiente': 'Pendiente',
       'confirmado': 'Confirmado',
+      'preparando': 'Preparando',
       'enviado': 'Enviado',
       'entregado': 'Entregado',
       'cancelado': 'Cancelado'
@@ -158,6 +180,12 @@
     <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
     <p class="mt-1 text-sm text-gray-600">Resumen general de tu tienda</p>
   </div>
+
+  {#if error}
+    <div class="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+      {error}
+    </div>
+  {/if}
 
   {#if loading}
     <div class="flex items-center justify-center py-12">
@@ -295,7 +323,7 @@
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-semibold text-gray-900">Pedidos Recientes</h2>
           <a 
-            href="/dashboard/pedidos" 
+            href="/pedidos" 
             class="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
           >
             Ver todos →
@@ -309,7 +337,7 @@
             <thead class="bg-gray-50">
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  ID
+                  Pedido
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Cliente
@@ -329,11 +357,11 @@
               {#each pedidosRecientes as pedido}
                 <tr class="hover:bg-gray-50 transition-colors">
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    #{pedido.id}
+                    #{pedido.numero_pedido || pedido.id}
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
                     <div class="text-sm font-medium text-gray-900">{pedido.cliente_nombre}</div>
-                    <div class="text-sm text-gray-500 hidden md:block">{pedido.cliente_telefono}</div>
+                    <div class="text-sm text-gray-500 hidden md:block">{pedido.cliente_whatsapp}</div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
                     {new Date(pedido.created_at).toLocaleDateString('es-MX')}
