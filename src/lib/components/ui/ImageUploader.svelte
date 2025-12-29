@@ -4,8 +4,9 @@
   import { createEventDispatcher } from 'svelte';
   import { Upload, X, Loader2, Image as ImageIcon, Link2 } from 'lucide-svelte';
   import { uploadImageToCloudinary, generateImagePreview, isValidImageFile } from '$lib/utils/cloudinary';
-  //import { PUBLIC_CLOUDINARY_UPLOAD_PRESET, CLOUDINARY_CLOUD_NAME } from '$env';
-  import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET } from '$env/static/private';
+  // ✅ CORRECCIÓN: Solo usar variables públicas
+  import { PUBLIC_CLOUDINARY_UPLOAD_PRESET, PUBLIC_CLOUDINARY_CLOUD_NAME } from '$env/static/public';
+  
   const dispatch = createEventDispatcher();
   
   export let imageUrl = '';

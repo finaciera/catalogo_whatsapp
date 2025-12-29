@@ -1,5 +1,5 @@
 <!-- src/lib/components/dashboard/DashboardSidebar.svelte -->
-<!-- CORREGIDO: Logout funcionando correctamente -->
+<!-- ✅ Sidebar con módulo de Marcas -->
 <script>
   import { 
     LayoutDashboard, 
@@ -11,7 +11,8 @@
     LogOut,
     Home,
     X,
-    Tag
+    Tag,
+    Award
   } from 'lucide-svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
@@ -24,29 +25,22 @@
     { icon: LayoutDashboard, label: 'Resumen', href: '/dashboard' },
     { icon: Package, label: 'Productos', href: '/productos' },
     { icon: Tag, label: 'Categorías', href: '/categorias' },
+    { icon: Award, label: 'Marcas', href: '/marcas' },
     { icon: ShoppingBag, label: 'Pedidos', href: '/pedidos' },
     { icon: MessageCircle, label: 'Mensajes', href: '/mensajes' },
     { icon: Settings, label: 'Configuración', href: '/configuracion' }
   ];
   
-  // ✅ CORRECCIÓN: Logout con async y fetch para limpiar cookies del servidor
   async function handleLogout() {
     try {
-      // 1. Limpiar estado local del store
       auth.logout();
-      
-      // 2. Llamar al endpoint del servidor para limpiar cookies
       await fetch('/logout', {
         method: 'POST',
         credentials: 'same-origin'
       });
-      
-      // 3. Redirigir al login
       await goto('/login', { replaceState: true, invalidateAll: true });
-      
     } catch (error) {
       console.error('Error en logout:', error);
-      // Forzar redirección aunque haya error
       window.location.href = '/login';
     }
   }
@@ -105,7 +99,7 @@
           class:justify-center={collapsed}
           title={collapsed ? item.label : ''}
         >
-          <item.icon class="w-5 h-5 flex-shrink-0" />
+          <svelte:component this={item.icon} class="w-5 h-5 flex-shrink-0" />
           {#if !collapsed}
             <span class="ml-3 font-medium">{item.label}</span>
           {/if}
@@ -202,7 +196,7 @@
               class:text-white={isActive(item.href)}
               class:hover:bg-gray-800={!isActive(item.href)}
             >
-              <item.icon class="w-5 h-5" />
+              <svelte:component this={item.icon} class="w-5 h-5" />
               <span class="ml-3 font-medium">{item.label}</span>
             </a>
           {/each}

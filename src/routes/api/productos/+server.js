@@ -112,7 +112,7 @@ export async function POST({ request }) {
       precio,
       stock,
       categoria_id: parseInt(body.categoria_id),
-      marca_id: body.marca_id ? parseInt(body.marca_id) : null,  // ✅ NUEVO
+      marca_id: body.marca_id ? parseInt(body.marca_id) : null,  
       imagen_url: body.imagen_url?.trim() || null,
       destacado: Boolean(body.destacado),
       activo: body.activo !== false,
@@ -221,5 +221,4 @@ export async function DELETE({ url }) {
     console.error('Error en DELETE /api/productos:', error);
     return json({ error: error.message }, { status: 500 });
   }
-
 }
