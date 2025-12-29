@@ -107,10 +107,12 @@ export async function POST({ request }) {
     
     const productoData = {
       nombre: body.nombre.trim(),
-      descripcion: body.descripcion?.trim() || null,
+      descripcion_corta: body.descripcion_corta?.trim() || null,
+      descripcion_larga: body.descripcion_larga?.trim() || null,
       precio,
       stock,
       categoria_id: parseInt(body.categoria_id),
+      marca_id: body.marca_id ? parseInt(body.marca_id) : null,  // ✅ NUEVO
       imagen_url: body.imagen_url?.trim() || null,
       destacado: Boolean(body.destacado),
       activo: body.activo !== false,
@@ -219,4 +221,5 @@ export async function DELETE({ url }) {
     console.error('Error en DELETE /api/productos:', error);
     return json({ error: error.message }, { status: 500 });
   }
+
 }
