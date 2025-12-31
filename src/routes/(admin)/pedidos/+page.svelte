@@ -30,7 +30,7 @@
   async function loadPedidos() {
     try {
       loading = true;
-    const res = await fetch('api/pedidos');
+    const res = await fetch('/api/pedidos');
      error = ''; // Limpiar errores previos
     const result = await res.json();
       pedidos = result.success ? result.data : [];

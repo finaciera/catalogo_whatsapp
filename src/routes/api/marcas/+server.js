@@ -1,49 +1,11 @@
 // src/routes/api/marcas/+server.js
-// ✅ API REST completa para Marcas
+
 import { json } from '@sveltejs/kit';
 import { supabase } from '$lib/supabaseClient';
-
-function generateSlug(nombre) {
-  return nombre
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-}
-
-async function ensureUniqueSlug(baseSlug, excludeId = null) {
-  let slug = baseSlug;
-  let counter = 1;
-  
-  while (true) {
-    const query = supabase
-      .from('marcas')
-      .select('id')
-      .eq('nombre', slug);
-    
-    if (excludeId) {
-      query.neq('id', excludeId);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) {
-      console.error('Error checking slug:', error);
-      throw error;
-    }
-    
-    if (!data || data.length === 0) {
-      return slug;
-    }
-    
-    slug = `${baseSlug}-${counter}`;
-    counter++;
-  }
-}
+import { supabaseAdmin } from '$lib/supabaseServer';
 
 // ========================================
-// GET - Listar marcas
+// GET - Listar marcas (puede usar cliente público)
 // ========================================
 export async function GET({ url }) {
   try {
@@ -77,6 +39,7 @@ export async function GET({ url }) {
 
 // ========================================
 // POST - Crear marca
+// ✅ CORRECCIÓN: Usar supabaseAdmin
 // ========================================
 export async function POST({ request }) {
   try {
@@ -97,13 +60,17 @@ export async function POST({ request }) {
       activo: body.activo !== false
     };
     
-    const { data, error } = await supabase
+    console.log('📤 Creando marca con supabaseAdmin:', marcaData);
+    
+    // ✅ CORRECCIÓN: Usar supabaseAdmin en lugar de supabase
+    const { data, error } = await supabaseAdmin
       .from('marcas')
       .insert([marcaData])
       .select()
       .single();
     
     if (error) {
+      console.error('❌ Error Supabase:', error);
       if (error.code === '23505') {
         return json(
           { success: false, error: 'Ya existe una marca con ese nombre' },
@@ -113,6 +80,8 @@ export async function POST({ request }) {
       throw error;
     }
     
+    console.log('✅ Marca creada:', data);
+    
     return json({
       success: true,
       data,
@@ -120,7 +89,7 @@ export async function POST({ request }) {
     }, { status: 201 });
     
   } catch (error) {
-    console.error('Error POST marca:', error);
+    console.error('❌ Error POST marca:', error);
     return json(
       { success: false, error: error.message },
       { status: 500 }
@@ -130,6 +99,7 @@ export async function POST({ request }) {
 
 // ========================================
 // PUT - Actualizar marca
+// ✅ CORRECCIÓN: Usar supabaseAdmin
 // ========================================
 export async function PUT({ request }) {
   try {
@@ -156,7 +126,10 @@ export async function PUT({ request }) {
       updateData.nombre = updateData.nombre.trim();
     }
     
-    const { data, error } = await supabase
+    console.log('📤 Actualizando marca con supabaseAdmin:', updateData);
+    
+    // ✅ CORRECCIÓN: Usar supabaseAdmin en lugar de supabase
+    const { data, error } = await supabaseAdmin
       .from('marcas')
       .update(updateData)
       .eq('id', body.id)
@@ -165,6 +138,8 @@ export async function PUT({ request }) {
     
     if (error) throw error;
     
+    console.log('✅ Marca actualizada:', data);
+    
     return json({
       success: true,
       data,
@@ -172,7 +147,7 @@ export async function PUT({ request }) {
     });
     
   } catch (error) {
-    console.error('Error PUT marca:', error);
+    console.error('❌ Error PUT marca:', error);
     return json(
       { success: false, error: error.message },
       { status: 500 }
@@ -182,6 +157,7 @@ export async function PUT({ request }) {
 
 // ========================================
 // DELETE - Eliminar marca
+// ✅ CORRECCIÓN: Usar supabaseAdmin
 // ========================================
 export async function DELETE({ url }) {
   try {
@@ -194,7 +170,7 @@ export async function DELETE({ url }) {
       );
     }
     
-    // Verificar si hay productos usando esta marca
+    // Verificar si hay productos usando esta marca (puede usar cliente público para lectura)
     const { data: productosConMarca, error: errorCheck } = await supabase
       .from('productos')
       .select('id')
@@ -213,13 +189,15 @@ export async function DELETE({ url }) {
       );
     }
     
-    // Eliminar marca
-    const { error } = await supabase
+    // ✅ CORRECCIÓN: Usar supabaseAdmin para eliminar
+    const { error } = await supabaseAdmin
       .from('marcas')
       .delete()
       .eq('id', id);
     
     if (error) throw error;
+    
+    console.log('✅ Marca eliminada:', id);
     
     return json({
       success: true,
@@ -227,7 +205,7 @@ export async function DELETE({ url }) {
     });
     
   } catch (error) {
-    console.error('Error DELETE marca:', error);
+    console.error('❌ Error DELETE marca:', error);
     return json(
       { success: false, error: error.message },
       { status: 500 }

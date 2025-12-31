@@ -1,5 +1,5 @@
 <!-- src/lib/components/forms/ProductForm.svelte -->
-<!-- FORMULARIO COMPLETO Y FUNCIONAL -->
+
 <script>
   import { onMount, createEventDispatcher } from 'svelte';
   import { Save, X, Loader2, Upload } from 'lucide-svelte';
@@ -10,6 +10,7 @@
   export let producto = null;
   export let categorias = [];
   export let marcas = [];
+  export let disabled = false;
 
   let loading = false;
   let loadingCategorias = false;
@@ -17,6 +18,23 @@
   let error = '';
   let success = '';
   let imagePreview = '';
+
+  // Form data inicial - IMPORTANTE: categoria_id y marca_id son UUIDs (strings), no números
+  let formData = {
+    nombre: '',
+    descripcion_corta: '',
+    descripcion_larga: '',
+    precio: '',
+    precio_oferta: '',
+    stock: '',
+    categoria_id: null,
+    marca_id: null,
+    imagen_url: '',
+    destacado: false,
+    activo: true,
+    slug: '',
+    sku: ''
+  };
 
   // Cargar categorías si no vienen como prop
   onMount(async () => {
@@ -36,17 +54,18 @@
         descripcion_corta: producto.descripcion_corta || '',
         descripcion_larga: producto.descripcion_larga || '',
         precio: producto.precio?.toString() || '',
+        precio_oferta: producto.precio_oferta?.toString() || '',
         stock: producto.stock?.toString() || '',
-        categoria_id: producto.categoria_id?.toString() || '',
-        marca_id: producto.marca_id?.toString() || '',
+        categoria_id: producto.categoria_id || null,  // ✅ UUID como string
+        marca_id: producto.marca_id || null,          // ✅ UUID como string
         imagen_url: producto.imagen_url || '',
         destacado: Boolean(producto.destacado),
         activo: producto.activo !== false,
         slug: producto.slug || '',
-        descuento: producto.descuento?.toString() || '',
         sku: producto.sku || ''
       };
       imagePreview = producto.imagen_url || '';
+      console.log('📝 Producto cargado:', { categoria_id: formData.categoria_id, marca_id: formData.marca_id });
     }
   });
 
@@ -57,6 +76,7 @@
       const result = await res.json();
       if (result.success) {
         categorias = result.data;
+        console.log('📂 Categorías cargadas:', categorias.length);
       }
     } catch (err) {
       console.error('Error cargando categorías:', err);
@@ -72,6 +92,7 @@
       const result = await res.json();
       if (result.success) {
         marcas = result.data;
+        console.log('🏷️ Marcas cargadas:', marcas.length);
       }
     } catch (err) {
       console.error('Error cargando marcas:', err);
@@ -80,56 +101,58 @@
     }
   }
 
-  // Form data inicial
-  let formData = {
-    nombre: '',
-    descripcion_corta: '',
-    descripcion_larga: '',
-    precio: '',
-    stock: '',
-    categoria_id: '',
-    marca_id: '',
-    imagen_url: '',
-    destacado: false,
-    activo: true,
-    slug: '',
-    descuento: '',
-    sku: ''
-  };
-
   // Validaciones
   $: nombreValido = formData.nombre.trim().length > 0;
   $: precioValido = formData.precio && !isNaN(parseFloat(formData.precio)) && parseFloat(formData.precio) >= 0;
-  $: categoriaValida = formData.categoria_id !== '';
-  $: formularioValido = nombreValido && precioValido && categoriaValida;
+  $: categoriaValida = formData.categoria_id !== null && formData.categoria_id !== '';
+  $: formularioValido = nombreValido && precioValido && categoriaValida; 
+  $: isDisabled = disabled || loading;
 
   // Preview de imagen
   $: if (formData.imagen_url && formData.imagen_url !== imagePreview) {
     imagePreview = formData.imagen_url;
   }
 
+  // Handlers para los selects - ✅ CORREGIDO: manejar UUIDs como strings
+  function handleCategoriaChange(event) {
+    const value = event.target.value;
+    formData.categoria_id = value === '' ? null : value;  // ✅ Mantener como string (UUID)
+    console.log('📂 Categoría seleccionada:', formData.categoria_id);
+  }
+
+  function handleMarcaChange(event) {
+    const value = event.target.value;
+    formData.marca_id = value === '' ? null : value;  // ✅ Mantener como string (UUID)
+    console.log('🏷️ Marca seleccionada:', formData.marca_id);
+  }
+
   async function handleSubmit() {
-    if (!formularioValido || loading) return;
+    if (!formularioValido || isDisabled) return;
     
     error = '';
     success = '';
     loading = true;
 
     try {
-      // Preparar datos
+      // Validación adicional
+      if (!formData.categoria_id) {
+        throw new Error('Debe seleccionar una categoría');
+      }
+
+      // Preparar datos - ✅ CORREGIDO: no convertir UUIDs a número
       const dataToSend = {
         nombre: formData.nombre.trim(),
         descripcion_corta: formData.descripcion_corta?.trim() || null,
         descripcion_larga: formData.descripcion_larga?.trim() || null,
         precio: parseFloat(formData.precio),
+        precio_oferta: formData.precio_oferta && formData.precio_oferta !== '' ? parseFloat(formData.precio_oferta) : null,
         stock: formData.stock && formData.stock !== '' ? parseInt(formData.stock) : null,
-        categoria_id: parseInt(formData.categoria_id),
-        marca_id: formData.marca_id && formData.marca_id !== '' ? parseInt(formData.marca_id) : null,
+        categoria_id: formData.categoria_id,  // ✅ UUID como string
+        marca_id: formData.marca_id || null,  // ✅ UUID como string
         imagen_url: formData.imagen_url?.trim() || null,
         destacado: formData.destacado,
         activo: formData.activo,
         slug: formData.slug?.trim() || null,
-        descuento: formData.descuento && formData.descuento !== '' ? parseFloat(formData.descuento) : null,
         sku: formData.sku?.trim() || null
       };
 
@@ -168,14 +191,14 @@
           descripcion_corta: '',
           descripcion_larga: '',
           precio: '',
+          precio_oferta: '',
           stock: '',
-          categoria_id: '',
-          marca_id: '',
+          categoria_id: null,
+          marca_id: null,
           imagen_url: '',
           destacado: false,
           activo: true,
           slug: '',
-          descuento: '',
           sku: ''
         };
         imagePreview = '';
@@ -240,7 +263,7 @@
         id="nombre"
         type="text"
         bind:value={formData.nombre}
-        disabled={loading}
+        disabled={isDisabled}
         class="input"
         class:border-red-500={!nombreValido && formData.nombre.length > 0}
         placeholder="Ej: Laptop Gamer Pro"
@@ -251,7 +274,7 @@
       {/if}
     </div>
 
-    <!-- Categoría -->
+    <!-- Categoría - ✅ CORREGIDO: value usa UUID directamente -->
     <div>
       <label for="categoria" class="label">
         Categoría <span class="text-red-500">*</span>
@@ -264,10 +287,11 @@
       {:else}
         <select
           id="categoria"
-          bind:value={formData.categoria_id}
-          disabled={loading}
+          value={formData.categoria_id || ''}
+          on:change={handleCategoriaChange}
+          disabled={isDisabled}
           class="input"
-          class:border-red-500={!categoriaValida && formData.categoria_id !== ''}
+          class:border-red-500={!categoriaValida}
           required
         >
           <option value="">Seleccionar categoría</option>
@@ -275,6 +299,9 @@
             <option value={cat.id}>{cat.nombre}</option>
           {/each}
         </select>
+        {#if !categoriaValida && formData.nombre.length > 0}
+          <p class="mt-1 text-sm text-red-600">Debe seleccionar una categoría</p>
+        {/if}
         {#if categorias.length === 0}
           <p class="mt-1 text-sm text-amber-600">
             No hay categorías. <a href="/categorias" class="underline">Crear una</a>
@@ -283,7 +310,7 @@
       {/if}
     </div>
 
-    <!-- Marca -->
+    <!-- Marca - ✅ CORREGIDO: value usa UUID directamente -->
     <div>
       <label for="marca" class="label">
         Marca
@@ -296,8 +323,9 @@
       {:else}
         <select
           id="marca"
-          bind:value={formData.marca_id}
-          disabled={loading}
+          value={formData.marca_id || ''}
+          on:change={handleMarcaChange}
+          disabled={isDisabled}
           class="input"
         >
           <option value="">Sin marca</option>
@@ -326,7 +354,7 @@
           step="0.01"
           min="0"
           bind:value={formData.precio}
-          disabled={loading}
+          disabled={isDisabled}
           class="input pl-8"
           class:border-red-500={!precioValido && formData.precio !== ''}
           placeholder="0.00"
@@ -336,6 +364,27 @@
       {#if !precioValido && formData.precio !== ''}
         <p class="mt-1 text-sm text-red-600">Ingresa un precio válido</p>
       {/if}
+    </div>
+
+    <!-- Precio de Oferta -->
+    <div>
+      <label for="precio_oferta" class="label">
+        Precio de Oferta
+      </label>
+      <div class="relative">
+        <span class="absolute left-3 top-2.5 text-gray-500">$</span>
+        <input
+          id="precio_oferta"
+          type="number"
+          step="0.01"
+          min="0"
+          bind:value={formData.precio_oferta}
+          disabled={isDisabled}
+          class="input pl-8"
+          placeholder="0.00"
+        />
+      </div>
+      <p class="mt-1 text-xs text-gray-500">Opcional: precio con descuento</p>
     </div>
 
     <!-- Stock -->
@@ -348,68 +397,21 @@
         type="number"
         min="0"
         bind:value={formData.stock}
-        disabled={loading}
+        disabled={isDisabled}
         class="input"
         placeholder="Dejar vacío si no aplica"
       />
       <p class="mt-1 text-xs text-gray-500">Opcional: cantidad disponible</p>
     </div>
 
-    <!-- SKU -->
-    <div>
-      <label for="sku" class="label">
-        SKU / Código
-      </label>
-      <input
-        id="sku"
-        type="text"
-        bind:value={formData.sku}
-        disabled={loading}
-        class="input"
-        placeholder="Ej: PROD-001"
-      />
-    </div>
-
-    <!-- Descuento -->
-    <div>
-      <label for="descuento" class="label">
-        Descuento (%)
-      </label>
-      <input
-        id="descuento"
-        type="number"
-        step="0.01"
-        min="0"
-        max="100"
-        bind:value={formData.descuento}
-        disabled={loading}
-        class="input"
-        placeholder="0"
-      />
-    </div>
-
-    <!-- Slug -->
-    <div>
-      <label for="slug" class="label">
-        Slug (URL)
-      </label>
-      <input
-        id="slug"
-        type="text"
-        bind:value={formData.slug}
-        disabled={loading}
-        class="input"
-        placeholder="se-genera-automaticamente"
-      />
-      <p class="mt-1 text-xs text-gray-500">Dejar vacío para generar automáticamente</p>
-    </div>
+    
 
     <!-- Imagen con Upload a Cloudinary -->
     <div class="md:col-span-2">
       <ImageUploader
         bind:imageUrl={formData.imagen_url}
         label="Imagen del Producto"
-        {disabled}
+        disabled={isDisabled}
         on:upload={handleImageUpload}
         on:remove={handleImageRemove}
       />
@@ -424,7 +426,7 @@
         id="descripcion_corta"
         type="text"
         bind:value={formData.descripcion_corta}
-        disabled={loading}
+        disabled={isDisabled}
         class="input"
         placeholder="Breve descripción del producto (se muestra en listados)"
         maxlength="200"
@@ -440,7 +442,7 @@
       <textarea
         id="descripcion_larga"
         bind:value={formData.descripcion_larga}
-        disabled={loading}
+        disabled={isDisabled}
         rows="4"
         class="input resize-none"
         placeholder="Descripción completa del producto con todos los detalles..."
@@ -453,7 +455,7 @@
         <input
           type="checkbox"
           bind:checked={formData.destacado}
-          disabled={loading}
+          disabled={isDisabled}
           class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
         />
         <span class="ml-2 text-sm text-gray-700 font-medium">
@@ -465,7 +467,7 @@
         <input
           type="checkbox"
           bind:checked={formData.activo}
-          disabled={loading}
+          disabled={isDisabled}
           class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
         />
         <span class="ml-2 text-sm text-gray-700 font-medium">
@@ -480,7 +482,7 @@
     <button
       type="button"
       on:click={handleCancel}
-      disabled={loading}
+      disabled={isDisabled}
       class="btn-secondary w-full sm:w-auto"
     >
       <X class="w-4 h-4 mr-2" />
@@ -489,7 +491,7 @@
 
     <button
       type="submit"
-      disabled={!formularioValido || loading}
+      disabled={!formularioValido || isDisabled}
       class="btn-primary w-full sm:flex-1 flex items-center justify-center"
     >
       {#if loading}

@@ -91,7 +91,7 @@ export async function POST({ request }) {
     // Conversiones y preparación de datos
     const precio = body.precio ? parseFloat(body.precio) : 0;
     const stock = body.stock !== '' && body.stock !== null ? parseInt(body.stock) : null;
-    const descuento = body.descuento ? parseFloat(body.descuento) : null;
+    const precio_oferta = body.precio_oferta ? parseFloat(body.precio_oferta) : 0;
     
     if (isNaN(precio)) {
       return json({ error: 'El precio debe ser un número válido' }, { status: 400 });
@@ -117,7 +117,7 @@ export async function POST({ request }) {
       destacado: Boolean(body.destacado),
       activo: body.activo !== false,
       slug,
-      descuento,
+      precio_oferta,
       sku: body.sku?.trim() || null
     };
     
@@ -172,8 +172,8 @@ export async function PUT({ request }) {
       updateData.stock = parseInt(updateData.stock);
     }
     
-    if (updateData.descuento !== undefined && updateData.descuento !== '') {
-      updateData.descuento = parseFloat(updateData.descuento);
+    if (updateData.precio_oferta !== undefined) {
+      updateData.precio_oferta = parseFloat(updateData.precio_oferta);
     }
     
     // Actualizar slug si cambió el nombre
