@@ -1,10 +1,9 @@
 // src/routes/api/pedidos/+server.js
-//x
 import { json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/supabaseServer';
 
 // ========================================
-// GET - Listar pedidos con filtros
+// GET - Listar pedidos con ITEMS incluidos
 // ========================================
 export async function GET({ url }) {
   try {
@@ -12,9 +11,22 @@ export async function GET({ url }) {
     const limit = parseInt(url.searchParams.get('limit') || '20');
     const estado = url.searchParams.get('estado');
     
+    // ✅ CORRECCIÓN: SELECT directo con items en lugar de vista
     let query = supabaseAdmin
-      .from('vista_pedidos_resumen')
-      .select('*', { count: 'exact' })
+      .from('pedidos')
+      .select(`
+        *,
+        items:pedidos_items(
+          id,
+          producto_id,
+          producto_nombre,
+          producto_sku,
+          cantidad,
+          precio_unitario,
+          subtotal,
+          imagen_url
+        )
+      `, { count: 'exact' })
       .order('created_at', { ascending: false });
     
     if (estado) {
@@ -71,7 +83,7 @@ export async function POST({ request }) {
       );
     }
     
-    // Generar número de pedido único usando la función de BD
+    // Generar número de pedido único
     const { data: numeroPedido, error: errorNumero } = await supabaseAdmin
       .rpc('generar_numero_pedido');
     
@@ -86,7 +98,6 @@ export async function POST({ request }) {
     let clienteId = null;
     
     if (body.cliente_whatsapp) {
-      // Buscar cliente existente por WhatsApp
       const { data: clienteExistente } = await supabaseAdmin
         .from('clientes')
         .select('id')
@@ -96,7 +107,6 @@ export async function POST({ request }) {
       if (clienteExistente) {
         clienteId = clienteExistente.id;
         
-        // Actualizar información del cliente si cambió
         await supabaseAdmin
           .from('clientes')
           .update({
@@ -106,7 +116,6 @@ export async function POST({ request }) {
           })
           .eq('id', clienteId);
       } else {
-        // Crear nuevo cliente
         const { data: nuevoCliente, error: errorCliente } = await supabaseAdmin
           .from('clientes')
           .insert({
@@ -150,7 +159,6 @@ export async function POST({ request }) {
     
     if (errorPedido) throw errorPedido;
     
-    // Crear items del pedido
     const itemsData = body.items.map(item => ({
       pedido_id: pedido.id,
       producto_id: item.id || null,
@@ -158,7 +166,8 @@ export async function POST({ request }) {
       producto_sku: item.sku || null,
       cantidad: parseInt(item.cantidad),
       precio_unitario: parseFloat(item.precio_unitario),
-      subtotal: parseFloat(item.precio_unitario) * parseInt(item.cantidad)
+      subtotal: parseFloat(item.precio_unitario) * parseInt(item.cantidad),
+      imagen_url: item.imagen_url || null // ✅ AGREGADO
     }));
     
     const { error: errorItems } = await supabaseAdmin
@@ -166,16 +175,6 @@ export async function POST({ request }) {
       .insert(itemsData);
     
     if (errorItems) throw errorItems;
-    
-    // Actualizar stock de productos (opcional, comentado por ahora)
-    // for (const item of body.items) {
-    //   if (item.id) {
-    //     await supabaseAdmin.rpc('decrementar_stock', {
-    //       producto_id: item.id,
-    //       cantidad: item.cantidad
-    //     });
-    //   }
-    // }
     
     // Obtener pedido completo con items
     const { data: pedidoCompleto } = await supabaseAdmin

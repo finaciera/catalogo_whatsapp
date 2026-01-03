@@ -53,7 +53,8 @@
           nombre: item.nombre,
           sku: item.sku,
           cantidad: item.cantidad,
-          precio_unitario: item.precio_unitario
+          precio_unitario: item.precio_unitario,
+          imagen_url: item.imagen_url 
         })),
         cliente_nombre: datosCliente.nombre,
         cliente_whatsapp: datosCliente.whatsapp,

@@ -35,7 +35,7 @@
     const result = await res.json();
       pedidos = result.success ? result.data : [];
       if (res.ok) {
-        pedidos = await res.json();
+        //pedidos = await res.json();
       }
     } catch (err) {
       error = 'Error al cargar los pedidos';
@@ -487,7 +487,7 @@
                       <div class="w-12 h-12 flex-shrink-0 bg-gray-200 rounded-lg overflow-hidden">
                         <img 
                           src={item.imagen_url || 'https://via.placeholder.com/150?text=Sin+Imagen'}
-                          alt={item.nombre}
+                          alt={item.nombre }
                           class="w-full h-full object-cover"
                           on:error={(e) => e.target.src = 'https://via.placeholder.com/150?text=Error'}
                         />
