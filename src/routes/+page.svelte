@@ -58,12 +58,31 @@
         Encuentra los mejores productos y haz tu pedido directamente por WhatsApp. 
         Fácil, rápido y sin complicaciones.
       </p>
+      <div class="bg-blue-50 border border-blue-100 rounded-xl p-6">
+      <div class="flex items-start space-x-3">
+        <div class="flex-shrink-0">
+          <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+        <div>
+          <h3 class="font-semibold text-blue-800 mb-1">¿Cómo comprar?</h3>
+          <ul class="text-sm text-blue-700 space-y-1">
+            <li>1. Agrega productos a tu carrito</li>
+            <li>2. Revisa tu pedido en el carrito</li>
+            <li>3. Envía tu pedido por WhatsApp</li>
+            <li>4. Coordina pago y entrega directamente</li>
+          </ul>
+        </div>
+      </div>
+    </div>
       {#if productos.length > 0}
         <p class="mt-4 text-sm opacity-75">
           🎉 {productos.length} productos disponibles
         </p>
       {/if}
     </div>
+     
   </section>
   
   <!-- Filtros y Búsqueda -->

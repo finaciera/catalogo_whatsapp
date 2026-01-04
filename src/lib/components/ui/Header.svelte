@@ -1,3 +1,4 @@
+<!-- /src/lib/components/ui/header.svelte -->
 <script>
   import { Menu, X, ShoppingCart, Store, Settings } from 'lucide-svelte';
   import { cantidadItems } from '$lib/stores/carritoStore';
@@ -6,13 +7,14 @@
   
   let menuAbierto = false;
   
-  const navLinks = [
+  // ✅ Links solo para móvil (ya no se usan en desktop)
+  const navLinksMobile = [
     { href: '/', label: 'Catálogo' },
     { href: '/carrito', label: 'Mi Carrito' }
   ];
   
   // Verificar si el usuario está autenticado para mostrar enlace al dashboard
-  $: mostrarDashboard = $auth.isAuthenticated;
+
 </script>
 
 <header class="bg-white shadow-md sticky top-0 z-50">
@@ -26,29 +28,19 @@
       
       <!-- Desktop Navigation -->
       <nav class="hidden md:flex items-center space-x-6">
-        {#each navLinks as link}
-          <a 
-            href={link.href} 
-            class="text-gray-700 hover:text-primary-600 font-medium transition-colors"
-            on:click={() => menuAbierto = false}
-          >
-            {link.label}
-          </a>
-        {/each}
-        
-        <!-- Enlace al Dashboard si está autenticado -->
-        {#if mostrarDashboard}
+        <!-- mostrar Dashboard -->
+       
           <a 
             href="/dashboard" 
             class="flex items-center space-x-2 text-gray-700 hover:text-primary-600 font-medium transition-colors"
             title="Panel de Administración"
           >
             <Settings class="w-5 h-5" />
-            <span>Dashboard</span>
+            
           </a>
-        {/if}
         
-        <!-- Carrito Icon para desktop -->
+        
+        <!-- ✅ Carrito Icon para desktop (sin texto) -->
         <div class="ml-4">
           <CarritoIcon />
         </div>
@@ -56,8 +48,8 @@
       
       <!-- Mobile Menu Button -->
       <div class="flex items-center space-x-4 md:hidden">
-        <!-- Icono de Dashboard en móvil si está autenticado -->
-        {#if mostrarDashboard}
+        <!-- Icono de Dashboard  -->
+        
           <a 
             href="/dashboard" 
             class="p-2 rounded-md text-gray-700 hover:bg-gray-100"
@@ -65,7 +57,7 @@
           >
             <Settings class="w-5 h-5" />
           </a>
-        {/if}
+        
         
         <CarritoIcon />
         <button 
@@ -86,7 +78,8 @@
     {#if menuAbierto}
       <div class="md:hidden border-t border-gray-200 py-4">
         <div class="flex flex-col space-y-3">
-          {#each navLinks as link}
+          <!-- ✅ Links de navegación móvil (Catálogo y Mi Carrito) -->
+          {#each navLinksMobile as link}
             <a 
               href={link.href} 
               class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md font-medium"
@@ -97,7 +90,7 @@
           {/each}
           
           <!-- Enlace al Dashboard en móvil -->
-          {#if mostrarDashboard}
+          
             <a 
               href="/dashboard" 
               class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md font-medium flex items-center space-x-2"
@@ -106,7 +99,7 @@
               <Settings class="w-5 h-5" />
               <span>Panel de Administración</span>
             </a>
-          {/if}
+          
         </div>
       </div>
     {/if}

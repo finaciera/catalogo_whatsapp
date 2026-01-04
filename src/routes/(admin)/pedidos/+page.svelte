@@ -30,13 +30,17 @@
   async function loadPedidos() {
     try {
       loading = true;
-    const res = await fetch('/api/pedidos');
-     error = ''; // Limpiar errores previos
-    const result = await res.json();
+      error = '';
+      const res = await fetch('/api/pedidos');
+      const result = await res.json();
       pedidos = result.success ? result.data : [];
-      if (res.ok) {
-        //pedidos = await res.json();
+      
+      // Debug: verificar estructura de datos
+      if (pedidos.length > 0) {
+        console.log('📦 Estructura del pedido:', pedidos[0]);
+        console.log('📦 Items del pedido:', pedidos[0].items);
       }
+      
     } catch (err) {
       error = 'Error al cargar los pedidos';
       console.error(err);
@@ -47,7 +51,7 @@
   
   async function cambiarEstado(pedidoId, nuevoEstado) {
     try {
-      const res = await fetch('api/pedidos', {
+      const res = await fetch('/api/pedidos', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: pedidoId, estado: nuevoEstado })
@@ -71,6 +75,8 @@
   }
   
   function verDetalles(pedido) {
+    console.log('👀 Ver detalles del pedido:', pedido);
+    console.log('📦 Items:', pedido.items);
     selectedPedido = pedido;
     showDetailsModal = true;
   }
@@ -249,8 +255,6 @@
       </p>
     </div>
   {:else}
-    <!-- Lista de pedidos - Desktop: Tabla, Mobile: Cards -->
-    
     <!-- Vista Desktop (Tabla) -->
     <div class="hidden md:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
       <div class="overflow-x-auto">
@@ -485,18 +489,29 @@
                   <div class="flex items-center justify-between bg-gray-50 rounded-lg p-3">
                     <div class="flex items-center flex-1 min-w-0">
                       <div class="w-12 h-12 flex-shrink-0 bg-gray-200 rounded-lg overflow-hidden">
-                        <img 
-                          src={item.imagen_url || 'https://via.placeholder.com/150?text=Sin+Imagen'}
-                          alt={item.nombre }
-                          class="w-full h-full object-cover"
-                          on:error={(e) => e.target.src = 'https://via.placeholder.com/150?text=Error'}
-                        />
+                        {#if item.imagen_url}
+                          <img 
+                            src={item.imagen_url}
+                            alt={item.producto_nombre}
+                            class="w-full h-full object-cover"
+                            on:error={(e) => e.target.style.display = 'none'}
+                          />
+                        {:else}
+                          <div class="w-full h-full flex items-center justify-center">
+                            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                            </svg>
+                          </div>
+                        {/if}
                       </div>
                       <div class="ml-3 flex-1 min-w-0">
-                        <p class="text-sm font-medium text-gray-900 truncate">{item.nombre}</p>
+                        <p class="text-sm font-medium text-gray-900 truncate">{item.producto_nombre}</p>
                         <p class="text-sm text-gray-500">
                           {formatCurrency(item.precio_unitario)} × {item.cantidad}
                         </p>
+                        {#if item.producto_sku}
+                          <p class="text-xs text-gray-400">SKU: {item.producto_sku}</p>
+                        {/if}
                       </div>
                     </div>
                     <div class="text-sm font-semibold text-gray-900 ml-4">
