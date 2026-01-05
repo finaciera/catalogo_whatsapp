@@ -19,7 +19,7 @@ export async function handle({ event, resolve }) {
   if (path === '/login') {
     // Si ya tiene token válido, redirigir al dashboard
     if (token) {
-      throw redirect(302, '/dashboard');
+      throw redirect(302, '/(admin)/dashboard');
     }
     return await resolve(event);
   }

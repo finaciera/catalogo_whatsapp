@@ -31,7 +31,7 @@
         <!-- mostrar Dashboard -->
        
           <a 
-            href="/dashboard" 
+             href= "/dashboard"
             class="flex items-center space-x-2 text-gray-700 hover:text-primary-600 font-medium transition-colors"
             title="Panel de Administración"
           >
@@ -51,7 +51,7 @@
         <!-- Icono de Dashboard  -->
         
           <a 
-            href="/dashboard" 
+             href="/dashboard"
             class="p-2 rounded-md text-gray-700 hover:bg-gray-100"
             title="Panel de Administración"
           >
@@ -92,7 +92,7 @@
           <!-- Enlace al Dashboard en móvil -->
           
             <a 
-              href="/dashboard" 
+               href= "/dashboard"
               class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md font-medium flex items-center space-x-2"
               on:click={() => menuAbierto = false}
             >

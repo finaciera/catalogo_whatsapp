@@ -22,7 +22,7 @@
   export let mobileOpen = false;
   
   const menuItems = [
-    { icon: LayoutDashboard, label: 'Resumen', href: '/dashboard' },
+    { icon: LayoutDashboard, label: 'Resumen',  href: '/dashboard' },
     { icon: Package, label: 'Productos', href: '/productos' },
     { icon: Tag, label: 'Categorías', href: '/categorias' },
     { icon: Award, label: 'Marcas', href: '/marcas' },
