@@ -1,4 +1,5 @@
 <!-- src/routes/+page.svelte -->
+<!-- ✅ CORREGIDO: Uso correcto de ImageCarousel -->
 <script>
   import ProductCard from '$lib/components/catalog/ProductCard.svelte';
   import ImageCarousel from '$lib/components/ui/ImageCarousel.svelte';
@@ -13,7 +14,17 @@
   $: productos = data.productos || [];
   $: categorias = data.categorias || [];
   $: configuracion = data.configuracion;
+  
+  // ✅ CORRECCIÓN: Preparar imágenes correctamente
   $: imagenesCarrusel = configuracion?.imagenes_tienda || [];
+  
+  // Preparar tema para ImageCarousel
+  $: temaCarousel = {
+    primary: configuracion?.colores_tema?.colors?.primary || '#3B82F6',
+    primaryLight: configuracion?.colores_tema?.colors?.primaryLight || '#93C5FD',
+    primaryDark: configuracion?.colores_tema?.colors?.primaryDark || '#1D4ED8',
+    text: configuracion?.colores_tema?.colors?.text || '#FFFFFF'
+  };
   
   $: productosFiltrados = productos.filter(producto => {
     const coincideBusqueda = producto.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -35,37 +46,32 @@
   <!-- Hero Section con Carrusel -->
   {#if imagenesCarrusel.length > 0}
     <section class="relative">
+      <!-- ✅ CORRECCIÓN: Props correctas -->
       <ImageCarousel 
-        images={imagenesCarrusel} 
-        height="h-48 sm:h-64 md:h-80 lg:h-96"
-        autoplay={true}
-        interval={5000}
+        imagenes={imagenesCarrusel}
+        titulo={configuracion?.nombre_empresa || 'Catálogo de Productos'}
+        subtitulo={configuracion?.descripcion_empresa || 'Encuentra los mejores productos y haz tu pedido directamente por WhatsApp. Fácil, rápido y sin complicaciones.'}
+        ctaTexto="Ver Productos"
+        ctaEnlace="#productos"
+        tema={temaCarousel}
       />
       
-      <!-- Título superpuesto -->
-      <div class="absolute inset-0 flex items-center justify-center">
-        <div class="bg-white/95 backdrop-blur-sm rounded-2xl px-8 py-6 shadow-2xl text-center max-w-2xl mx-4">
-          <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
-            {configuracion?.nombre_empresa || 'Catálogo de Productos'}
-          </h1>
-          {#if configuracion?.descripcion_empresa}
-            <p class="text-gray-600">
-              {configuracion.descripcion_empresa}
-            </p>
-          {/if}
+      <!-- Scroll indicator -->
+      <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20 hidden md:block">
+        <div class="animate-bounce w-6 h-10 border-2 border-white/70 rounded-full flex justify-center">
+          <div class="w-1 h-3 bg-white/70 rounded-full mt-2"></div>
         </div>
       </div>
     </section>
   {:else}
     <!-- Fallback: Hero sin carrusel -->
-    <section class="bg-gradient-to-r from-primary-500 to-primary-600 rounded-2xl p-8 text-white">
+    <section class="bg-gradient-to-r from-primary-500 to-primary-600 rounded-2xl p-8 md:p-12 text-white">
       <div class="max-w-2xl">
-        <h1 class="text-4xl font-bold mb-4">
+        <h1 class="text-3xl md:text-4xl font-bold mb-4">
           {configuracion?.nombre_empresa || 'Catálogo de Productos'}
         </h1>
-        <p class="text-lg opacity-90">
-          Encuentra los mejores productos y haz tu pedido directamente por WhatsApp. 
-          Fácil, rápido y sin complicaciones.
+        <p class="text-lg md:text-xl opacity-90">
+          {configuracion?.descripcion_empresa || 'Encuentra los mejores productos y haz tu pedido directamente por WhatsApp. Fácil, rápido y sin complicaciones.'}
         </p>
         {#if productos.length > 0}
           <p class="mt-4 text-sm opacity-75">
@@ -76,17 +82,23 @@
     </section>
   {/if}
   
-  <!-- Info de compra -->
-  <div class="bg-blue-50 border border-blue-100 rounded-xl p-6">
+  <!-- Ancla para productos -->
+  <div id="productos" class="scroll-mt-24"></div>
+  
+  <!-- Info de compra - Actualizada con colores del tema -->
+  <div class="rounded-xl p-6 border" style="
+    background-color: {temaCarousel.primary}15;
+    border-color: {temaCarousel.primary}30;
+  ">
     <div class="flex items-start space-x-3">
       <div class="flex-shrink-0">
-        <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: {temaCarousel.primary}">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
         </svg>
       </div>
       <div>
-        <h3 class="font-semibold text-blue-800 mb-1">¿Cómo comprar?</h3>
-        <ul class="text-sm text-blue-700 space-y-1">
+        <h3 class="font-semibold mb-1" style="color: {temaCarousel.primaryDark}">¿Cómo comprar?</h3>
+        <ul class="text-sm space-y-1" style="color: {temaCarousel.primary}">
           <li>1. Agrega productos a tu carrito</li>
           <li>2. Revisa tu pedido en el carrito</li>
           <li>3. Envía tu pedido por WhatsApp</li>
@@ -203,3 +215,10 @@
     </div>
   {/if}
 </div>
+
+<style>
+  /* Suavizar scroll al ancla */
+  :global(html) {
+    scroll-behavior: smooth;
+  }
+</style>
