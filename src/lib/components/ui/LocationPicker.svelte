@@ -1,4 +1,5 @@
 <!-- src/lib/components/ui/LocationPicker.svelte -->
+<!-- ✅ VERSIÓN MEJORADA: Asegura que todos los cambios se propaguen correctamente -->
 <script>
   import { createEventDispatcher } from 'svelte';
   import { MapPin, Navigation, ExternalLink } from 'lucide-svelte';
@@ -8,7 +9,7 @@
   export let ubicacion = {
     latitud: null,
     longitud: null,
-    direccion: '',
+    direccion_completa: '',
     ciudad: '',
     estado: '',
     codigo_postal: '',
@@ -16,15 +17,34 @@
   };
   export let disabled = false;
   
+  // ✅ CORRECCIÓN: Función mejorada que actualiza y emite cambios
   function handleChange() {
-    dispatch('change', ubicacion);
+    // Asegurar que los valores numéricos sean correctos
+    if (ubicacion.latitud !== null && ubicacion.latitud !== '') {
+      ubicacion.latitud = parseFloat(ubicacion.latitud);
+    } else {
+      ubicacion.latitud = null;
+    }
+    
+    if (ubicacion.longitud !== null && ubicacion.longitud !== '') {
+      ubicacion.longitud = parseFloat(ubicacion.longitud);
+    } else {
+      ubicacion.longitud = null;
+    }
+    
+    // Emitir el objeto completo actualizado
+    dispatch('change', { ...ubicacion });
   }
   
   function generarUrlGoogleMaps() {
     if (ubicacion.latitud && ubicacion.longitud) {
       ubicacion.google_maps_url = `https://www.google.com/maps?q=${ubicacion.latitud},${ubicacion.longitud}`;
-    } else if (ubicacion.direccion) {
-      const query = encodeURIComponent(`${ubicacion.direccion}, ${ubicacion.ciudad}, ${ubicacion.estado} ${ubicacion.codigo_postal}`);
+    } else if (ubicacion.direccion_completa || ubicacion.ciudad) {
+      const direccion = ubicacion.direccion_completa || '';
+      const ciudad = ubicacion.ciudad || '';
+      const estado = ubicacion.estado || '';
+      const cp = ubicacion.codigo_postal || '';
+      const query = encodeURIComponent(`${direccion} ${ciudad} ${estado} ${cp}`.trim());
       ubicacion.google_maps_url = `https://www.google.com/maps/search/?api=1&query=${query}`;
     }
     handleChange();
@@ -39,12 +59,12 @@
   
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <div class="md:col-span-2">
-      <label class="label">Dirección</label>
+      <label class="label">Dirección Completa</label>
       <input
         type="text"
-        bind:value={ubicacion.direccion}
+        bind:value={ubicacion.direccion_completa}
         on:input={handleChange}
-        placeholder="Calle Principal 123"
+        placeholder="Calle Principal 123, Colonia Centro"
         class="input"
         {disabled}
       />
@@ -118,7 +138,7 @@
     <button
       type="button"
       on:click={generarUrlGoogleMaps}
-      disabled={disabled || (!ubicacion.direccion && (!ubicacion.latitud || !ubicacion.longitud))}
+      disabled={disabled || (!ubicacion.direccion_completa && !ubicacion.ciudad && (!ubicacion.latitud || !ubicacion.longitud))}
       class="btn-secondary flex items-center gap-2"
     >
       <Navigation class="w-4 h-4" />

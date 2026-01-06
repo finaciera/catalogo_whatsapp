@@ -1,6 +1,7 @@
 <!-- src/lib/components/ui/Header.svelte -->
+<!-- ✅ ACTUALIZADO: Icono de Home agregado para ir a la página de empresa -->
 <script>
-  import { Menu, X, ShoppingCart, Store, Settings } from 'lucide-svelte';
+  import { Menu, X, ShoppingCart, Store, Settings, Home } from 'lucide-svelte';
   import { cantidadItems } from '$lib/stores/carritoStore';
   import CarritoIcon from '$lib/components/cart/CarritoIcon.svelte';
   
@@ -10,6 +11,7 @@
   
   const navLinksMobile = [
     { href: '/', label: 'Catálogo' },
+    { href: '/empresa', label: 'Acerca de' },
     { href: '/carrito', label: 'Mi Carrito' }
   ];
   
@@ -46,8 +48,18 @@
         </span>
       </a>
       
-      <!-- Desktop: Redes sociales + Carrito -->
+      <!-- Desktop: Iconos + Redes sociales + Carrito -->
       <div class="hidden md:flex items-center">
+        <!-- Icono Home (Acerca de) -->
+        <a 
+          href="/empresa"
+          class="flex items-center space-x-2 text-gray-700 hover:text-primary-600 font-medium transition-colors mr-4"
+          title="Acerca de Nosotros"
+        >
+          <Home class="w-5 h-5" />
+          <span class="text-sm">Empresa</span>
+        </a>
+        
         {#if tieneRedes}
           <div class="flex items-center gap-3 pr-6 mr-6 border-r border-gray-200">
             {#if redesSociales.facebook}
@@ -110,6 +122,14 @@
       
       <!-- Mobile: Iconos -->
       <div class="flex items-center space-x-4 md:hidden">
+        <a 
+          href="/empresa"
+          class="p-2 rounded-md text-gray-700 hover:bg-gray-100"
+          title="Empresa"
+        >
+          <Home class="w-5 h-5" />
+        </a>
+        
         <a 
           href="/dashboard"
           class="p-2 rounded-md text-gray-700 hover:bg-gray-100"
