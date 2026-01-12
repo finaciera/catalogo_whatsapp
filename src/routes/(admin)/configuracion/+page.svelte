@@ -412,6 +412,83 @@
         </div>
       </div>
       
+      <!-- 💳 MÉTODOS DE PAGO -->
+      <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-yellow-500">
+        <h2 class="text-xl font-semibold text-gray-800 mb-6">Métodos de Pago</h2>
+        
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <!-- Depósito -->
+          <div>
+            <label class="flex items-center mb-2">
+              <input type="checkbox" bind:checked={formData.pago_deposito_visible} class="w-4 h-4 mr-2" />
+              Mostrar opción "Depósito"
+            </label>
+            <label class="flex items-center">
+              <input type="checkbox" bind:checked={formData.pago_deposito_disponible} class="w-4 h-4 mr-2" />
+              Disponible para uso
+            </label>
+          </div>
+          
+          <!-- Transferencia -->
+          <div>
+            <label class="flex items-center mb-2">
+              <input type="checkbox" bind:checked={formData.pago_transferencia_visible} class="w-4 h-4 mr-2" />
+              Mostrar opción "Transferencia"
+            </label>
+            <label class="flex items-center">
+              <input type="checkbox" bind:checked={formData.pago_transferencia_disponible} class="w-4 h-4 mr-2" />
+              Disponible para uso
+            </label>
+          </div>
+        </div>
+        
+        <!-- Cuentas bancarias -->
+        <div>
+          <label class="label mb-2">Cuentas Bancarias (JSON)</label>
+          <textarea
+            bind:value={formData.cuentas_pago}
+            rows="8"
+            class="input font-mono text-xs"
+            placeholder={`[{"banco":"BBVA","titular":"Empresa SA","numero_cuenta":"123456","clabe":"012345678901234567"}]`}
+          />
+          <p class="text-xs text-gray-500 mt-1">
+            Formato JSON. <a href="#" class="text-primary-600">Ver ejemplo</a>
+          </p>
+        </div>
+      </div>
+
+      <!-- 🚚 ENVÍO -->
+      <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Configuración de Envío</h2>
+        
+        <div class="grid grid-cols-2 gap-4">
+          <label class="flex items-center">
+            <input type="checkbox" bind:checked={formData.envio_visible} class="w-4 h-4 mr-2" />
+            Mostrar opción de envío
+          </label>
+          <label class="flex items-center">
+            <input type="checkbox" bind:checked={formData.envio_disponible} class="w-4 h-4 mr-2" />
+            Envío disponible
+          </label>
+        </div>
+      </div>
+
+      <!-- 📄 FACTURACIÓN -->
+      <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-purple-500">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Configuración de Facturación</h2>
+        
+        <div class="grid grid-cols-2 gap-4">
+          <label class="flex items-center">
+            <input type="checkbox" bind:checked={formData.facturacion_visible} class="w-4 h-4 mr-2" />
+            Mostrar opción de facturación
+          </label>
+          <label class="flex items-center">
+            <input type="checkbox" bind:checked={formData.facturacion_disponible} class="w-4 h-4 mr-2" />
+            Facturación disponible
+          </label>
+        </div>
+      </div>
+      
       <!-- 💰 CONFIGURACIÓN FINANCIERA -->
       <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
         <h2 class="text-xl font-semibold text-gray-800 mb-6">Configuración Financiera</h2>
