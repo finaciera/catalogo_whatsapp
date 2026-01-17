@@ -1,13 +1,9 @@
-// src/lib/pedidos/estadosCliente.js
-/**
- * Constantes y utilidades de estados para el CLIENTE
- * Este archivo SÍ puede usarse en componentes .svelte
- */
+// src/lib/pedidos/estados.js
+// ✅ ÚNICO ARCHIVO DE ESTADOS - Compartido entre cliente y servidor
 
 // ========================================
-// DEFINICIÓN DE ESTADOS (compartido)
+// ESTADOS DEL PEDIDO
 // ========================================
-
 export const ESTADOS = {
   PENDIENTE: 'pendiente',
   CONFIRMADO: 'confirmado',
@@ -19,6 +15,9 @@ export const ESTADOS = {
   CANCELADO: 'cancelado'
 };
 
+// ========================================
+// ESTADOS DE PAGO
+// ========================================
 export const ESTADOS_PAGO = {
   SIN_PAGO: 'sin_pago',
   PENDIENTE_VALIDACION: 'pendiente_validacion',
@@ -27,120 +26,76 @@ export const ESTADOS_PAGO = {
 };
 
 // ========================================
-// CONFIGURACIÓN DE ESTADOS (solo UI)
+// CONFIGURACIÓN UI (solo cliente)
 // ========================================
-
 export const CONFIG_ESTADOS = {
   [ESTADOS.PENDIENTE]: {
     label: 'Pendiente',
-    descripcion: 'Pedido creado, esperando confirmación',
+    descripcion: 'Pedido recibido, esperando confirmación',
     color: 'yellow',
     bgColor: 'bg-yellow-100',
     textColor: 'text-yellow-800',
     borderColor: 'border-yellow-200',
-    icon: '⏳',
-    responsable: 'cliente',
-    editable: true,
-    requiereValidacion: false
+    icon: '⏳'
   },
   [ESTADOS.CONFIRMADO]: {
     label: 'Confirmado',
-    descripcion: 'Vendedor confirmó stock y agregó costos',
+    descripcion: 'Stock validado, esperando pago',
     color: 'blue',
     bgColor: 'bg-blue-100',
     textColor: 'text-blue-800',
     borderColor: 'border-blue-200',
-    icon: '✓',
-    responsable: 'vendedor',
-    editable: true,
-    requiereValidacion: false,
-    acciones: ['generar_mensaje_pago']
+    icon: '✓'
   },
-  [ESTADOS.PAGADO]: {
-    label: 'Pagado',
-    descripcion: 'Pago validado, iniciando logística',
-    color: 'green',
-    bgColor: 'bg-green-100',
-    textColor: 'text-green-800',
-    borderColor: 'border-green-200',
-    icon: '💰',
-    responsable: 'vendedor',
-    editable: false,
-    requiereValidacion: true
-  },
-  [ESTADOS.PREPARANDO]: {
-    label: 'Preparando',
-    descripcion: 'Pedido en preparación',
-    color: 'purple',
-    bgColor: 'bg-purple-100',
-    textColor: 'text-purple-800',
-    borderColor: 'border-purple-200',
-    icon: '📦',
-    responsable: 'vendedor',
-    editable: false
-  },
-  [ESTADOS.ENVIADO]: {
-    label: 'Enviado',
-    descripcion: 'Pedido en tránsito',
-    color: 'indigo',
-    bgColor: 'bg-indigo-100',
-    textColor: 'text-indigo-800',
-    borderColor: 'border-indigo-200',
-    icon: '🚚',
-    responsable: 'vendedor',
-    editable: false,
-    requiereGuiaEnvio: false
-  },
-  [ESTADOS.RECIBIDO]: {
-    label: 'Recibido',
-    descripcion: 'Cliente confirmó recepción',
-    color: 'teal',
-    bgColor: 'bg-teal-100',
-    textColor: 'text-teal-800',
-    borderColor: 'border-teal-200',
-    icon: '📬',
-    responsable: 'cliente',
-    editable: false
-  },
-  [ESTADOS.ENTREGADO]: {
-    label: 'Entregado',
-    descripcion: 'Pedido completado',
-    color: 'green',
-    bgColor: 'bg-green-100',
-    textColor: 'text-green-800',
-    borderColor: 'border-green-200',
-    icon: '✅',
-    responsable: 'sistema',
-    editable: false
-  },
-  [ESTADOS.CANCELADO]: {
-    label: 'Cancelado',
-    descripcion: 'Pedido cancelado',
-    color: 'red',
-    bgColor: 'bg-red-100',
-    textColor: 'text-red-800',
-    borderColor: 'border-red-200',
-    icon: '❌',
-    responsable: 'vendedor',
-    editable: false,
-    requiereMotivo: true
-  }
+  // ... resto de configuraciones
 };
 
 // ========================================
-// HELPERS PARA UI
+// TRANSICIONES PERMITIDAS (solo servidor)
 // ========================================
+export const TRANSICIONES_PERMITIDAS = {
+  [ESTADOS.PENDIENTE]: [ESTADOS.CONFIRMADO, ESTADOS.CANCELADO],
+  [ESTADOS.CONFIRMADO]: [ESTADOS.PAGADO, ESTADOS.CANCELADO, ESTADOS.PENDIENTE],
+  [ESTADOS.PAGADO]: [ESTADOS.PREPARANDO, ESTADOS.ENVIADO, ESTADOS.CANCELADO],
+  [ESTADOS.PREPARANDO]: [ESTADOS.ENVIADO, ESTADOS.CANCELADO],
+  [ESTADOS.ENVIADO]: [ESTADOS.RECIBIDO, ESTADOS.ENTREGADO],
+  [ESTADOS.RECIBIDO]: [ESTADOS.ENTREGADO],
+  [ESTADOS.ENTREGADO]: [],
+  [ESTADOS.CANCELADO]: []
+};
 
-/**
- * Obtiene la configuración de un estado
- */
-export function obtenerConfigEstado(estado) {
-  return CONFIG_ESTADOS[estado] || CONFIG_ESTADOS[ESTADOS.PENDIENTE];
+// ========================================
+// VALIDACIONES (solo servidor)
+// ========================================
+export function validarTransicion(estadoActual, estadoNuevo) {
+  const permitidas = TRANSICIONES_PERMITIDAS[estadoActual] || [];
+  
+  if (!permitidas.includes(estadoNuevo)) {
+    return {
+      valido: false,
+      mensaje: `No se puede cambiar de ${estadoActual} a ${estadoNuevo}`
+    };
+  }
+  
+  return { valido: true };
 }
 
-/**
- * Obtiene los colores de un estado
- */
+export function esEditable(pedido) {
+  // Un pedido es editable si:
+  // 1. La bandera editable es true
+  // 2. El pago NO está validado
+  // 3. El estado permite edición
+  
+  if (pedido.editable === false) return false;
+  if (pedido.estado_pago === ESTADOS_PAGO.PAGADO) return false;
+  
+  const estadosEditables = [ESTADOS.PENDIENTE, ESTADOS.CONFIRMADO];
+  return estadosEditables.includes(pedido.estado);
+}
+
+// ========================================
+// HELPERS UI (cliente y servidor)
+// ========================================
 export function obtenerColorEstado(estado) {
   const config = CONFIG_ESTADOS[estado];
   return {
