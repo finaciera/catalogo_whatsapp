@@ -1,5 +1,5 @@
 // src/lib/server/pedidos/estados.js
-// ✅ VERSIÓN CORREGIDA - Máquina de estados bien definida
+// ✅ VERSIÓN CORREGIDA - Máquina d
 
 import { ESTADOS, ESTADOS_PAGO } from '$lib/pedidos/estadosCliente';
 
