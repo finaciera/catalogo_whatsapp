@@ -39,50 +39,12 @@
   });
   
   async function loadPedidos() {
+    // Solo recargar cuando sea necesario (botón, acción)
+    loading = true;
     try {
-      loading = true;
-      error = '';
-      debugInfo = 'Iniciando carga...';
-
-      const params = new URLSearchParams();
-      if (filterEstado) params.append('estado', filterEstado);
-      if (searchTerm) params.append('busqueda', searchTerm);
-      if (mostrarSoloPendientes) params.append('validacion_pendiente', 'true');
-      
-      const url = `/api/pedidos?${params.toString()}`;
-      debugInfo = `Llamando a: ${url}`;
-      console.log('🔍 Fetching:', url);
-      
-      const res = await fetch(url);
-      debugInfo = `Status: ${res.status} ${res.statusText}`;
-      console.log('📡 Response status:', res.status);
-      
-      // ✅ CRÍTICO: Verificar que la respuesta sea JSON
-      const contentType = res.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await res.text();
-        console.error('❌ Respuesta NO es JSON:', text.substring(0, 200));
-        throw new Error(`El servidor respondió con ${contentType}. Esperaba JSON.`);
-      }
-      
+      const res = await fetch('/api/pedidos');
       const result = await res.json();
-      console.log('📦 Resultado:', result);
-      debugInfo = `Pedidos recibidos: ${result.data?.length || 0}`;
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Error desconocido');
-      }
-      
       pedidos = result.data || [];
-      pendientesValidacion = result.metadata?.pendientesValidacion || 0;
-      
-      console.log('✅ Pedidos cargados:', pedidos.length);
-      debugInfo = '';
-      
-    } catch (err) {
-      console.error('❌ Error en loadPedidos:', err);
-      error = err.message || 'Error al cargar los pedidos';
-      debugInfo = `Error: ${err.message}`;
     } finally {
       loading = false;
     }

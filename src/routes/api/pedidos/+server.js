@@ -255,8 +255,8 @@ export async function POST({ request }) {
     
     const itemsData = body.items.map(item => ({
       pedido_id: pedido.id,
-      producto_id: item.producto_id || item.id || null, // REVISAR
-      producto_nombre: item.nombre || item.producto_nombre, // REVISAR
+      producto_id: item.producto_id, // ✅ Más claro
+      producto_nombre: item.nombre,
       producto_sku: item.sku?.trim() || null,
       cantidad: parseInt(item.cantidad),
       precio_unitario: parseFloat(item.precio_unitario),
