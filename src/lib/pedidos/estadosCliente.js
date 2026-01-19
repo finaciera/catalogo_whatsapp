@@ -1,5 +1,5 @@
-// src/lib/pedidos/estados.js
-// ✅ ÚNICO ARCHIVO DE ESTADOS - Compartido entre cliente y servidor
+// src/lib/pedidos/estadosCliente.js
+// ✅ VERSIÓN COMPLETA Y CORREGIDA
 
 // ========================================
 // ESTADOS DEL PEDIDO
@@ -26,7 +26,7 @@ export const ESTADOS_PAGO = {
 };
 
 // ========================================
-// CONFIGURACIÓN UI (solo cliente)
+// CONFIGURACIÓN UI - ✅ COMPLETA
 // ========================================
 export const CONFIG_ESTADOS = {
   [ESTADOS.PENDIENTE]: {
@@ -38,6 +38,7 @@ export const CONFIG_ESTADOS = {
     borderColor: 'border-yellow-200',
     icon: '⏳'
   },
+  
   [ESTADOS.CONFIRMADO]: {
     label: 'Confirmado',
     descripcion: 'Stock validado, esperando pago',
@@ -45,13 +46,72 @@ export const CONFIG_ESTADOS = {
     bgColor: 'bg-blue-100',
     textColor: 'text-blue-800',
     borderColor: 'border-blue-200',
-    icon: '✓'
+    icon: '✅'
   },
-  // ... resto de configuraciones
+  
+  [ESTADOS.PAGADO]: {
+    label: 'Pagado',
+    descripcion: 'Pago validado, preparando envío',
+    color: 'green',
+    bgColor: 'bg-green-100',
+    textColor: 'text-green-800',
+    borderColor: 'border-green-200',
+    icon: '💳'
+  },
+  
+  [ESTADOS.PREPARANDO]: {
+    label: 'Preparando',
+    descripcion: 'Pedido en preparación',
+    color: 'indigo',
+    bgColor: 'bg-indigo-100',
+    textColor: 'text-indigo-800',
+    borderColor: 'border-indigo-200',
+    icon: '📦'
+  },
+  
+  [ESTADOS.ENVIADO]: {
+    label: 'Enviado',
+    descripcion: 'Pedido en tránsito',
+    color: 'purple',
+    bgColor: 'bg-purple-100',
+    textColor: 'text-purple-800',
+    borderColor: 'border-purple-200',
+    icon: '🚚'
+  },
+  
+  [ESTADOS.RECIBIDO]: {
+    label: 'Recibido',
+    descripcion: 'Cliente confirmó recepción',
+    color: 'teal',
+    bgColor: 'bg-teal-100',
+    textColor: 'text-teal-800',
+    borderColor: 'border-teal-200',
+    icon: '📬'
+  },
+  
+  [ESTADOS.ENTREGADO]: {
+    label: 'Entregado',
+    descripcion: 'Pedido completado',
+    color: 'emerald',
+    bgColor: 'bg-emerald-100',
+    textColor: 'text-emerald-800',
+    borderColor: 'border-emerald-200',
+    icon: '✔️'
+  },
+  
+  [ESTADOS.CANCELADO]: {
+    label: 'Cancelado',
+    descripcion: 'Pedido cancelado',
+    color: 'red',
+    bgColor: 'bg-red-100',
+    textColor: 'text-red-800',
+    borderColor: 'border-red-200',
+    icon: '❌'
+  }
 };
 
 // ========================================
-// TRANSICIONES PERMITIDAS (solo servidor)
+// TRANSICIONES PERMITIDAS
 // ========================================
 export const TRANSICIONES_PERMITIDAS = {
   [ESTADOS.PENDIENTE]: [ESTADOS.CONFIRMADO, ESTADOS.CANCELADO],
@@ -65,7 +125,7 @@ export const TRANSICIONES_PERMITIDAS = {
 };
 
 // ========================================
-// VALIDACIONES (solo servidor)
+// VALIDACIONES
 // ========================================
 export function validarTransicion(estadoActual, estadoNuevo) {
   const permitidas = TRANSICIONES_PERMITIDAS[estadoActual] || [];
@@ -81,11 +141,7 @@ export function validarTransicion(estadoActual, estadoNuevo) {
 }
 
 export function esEditable(pedido) {
-  // Un pedido es editable si:
-  // 1. La bandera editable es true
-  // 2. El pago NO está validado
-  // 3. El estado permite edición
-  
+  if (!pedido) return false;
   if (pedido.editable === false) return false;
   if (pedido.estado_pago === ESTADOS_PAGO.PAGADO) return false;
   
@@ -94,13 +150,24 @@ export function esEditable(pedido) {
 }
 
 // ========================================
-// HELPERS UI (cliente y servidor)
+// HELPERS UI
 // ========================================
 export function obtenerColorEstado(estado) {
   const config = CONFIG_ESTADOS[estado];
+  
+  // ✅ DEFENSA: Si no existe config, devolver valores por defecto
+  if (!config) {
+    console.warn(`⚠️ CONFIG_ESTADOS["${estado}"] no existe. Usando valores por defecto.`);
+    return {
+      bg: 'bg-gray-100',
+      text: 'text-gray-800',
+      border: 'border-gray-200'
+    };
+  }
+  
   return {
-    bg: config?.bgColor || 'bg-gray-100',
-    text: config?.textColor || 'text-gray-800',
-    border: config?.borderColor || 'border-gray-200'
+    bg: config.bgColor,
+    text: config.textColor,
+    border: config.borderColor
   };
 }

@@ -4,6 +4,12 @@
   import { ESTADOS, CONFIG_ESTADOS } from '$lib/pedidos/estadosCliente';
   
   export let pedido;
+  // ✅ MEJOR: Calcular solo cuando pedido.estado cambie
+  $: estadoCancelado = pedido.estado === 'cancelado';
+  $: esEntregado = pedido.estado === 'entregado';
+  
+  // ✅ NO hacer llamadas a API en componentes de UI
+  // Deja que el padre (página) cargue los datos
   
   const pasos = [
     {
