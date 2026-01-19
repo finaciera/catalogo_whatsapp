@@ -88,6 +88,16 @@
     });
   }
   
+  function handleCambioEstado(event) {
+    // ✅ CORRECCIÓN: Recargar pedidos después del cambio
+    loadPedidos();
+    modalDetalles.open = false;
+  }
+
+  function abrirModalDetalles(pedido) {
+    modalDetalles = { open: true, pedido };
+  }
+
   function abrirWhatsApp(pedido) {
     const config = CONFIG_ESTADOS[pedido.estado];
     const mensaje = `Hola ${pedido.cliente_nombre}, tu pedido #${pedido.numero_pedido} está *${config.label}*. ${config.descripcion}`;
