@@ -4,6 +4,41 @@ import { supabaseAdmin } from '$lib/supabaseServer';
 import { esEditable } from '$lib/server/pedidos/estados';
 import { validarDatosCliente, validarItems, validarTotales } from '$lib/server/pedidos/validaciones';
 
+// ✅  MÉTODO GET
+export async function GET({ params }) {
+  const { id } = params;
+
+  try {
+    const { data: pedido, error } = await supabaseAdmin
+      .from('pedidos')
+      .select(`
+        *,
+        items:pedidos_items(*)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error || !pedido) {
+      return json({ success: false, error: 'Pedido no encontrado' }, { status: 404 });
+    }
+
+    // Verificar si es editable
+    const editable = esEditable(pedido);
+
+    return json({
+      success: true,
+      data: {
+        ...pedido,
+        editable
+      }
+    });
+
+  } catch (error) {
+    console.error('Error en GET editar:', error);
+    return json({ success: false, error: 'Error interno' }, { status: 500 });
+  }
+}
+
 export async function PUT({ params, request }) {
   const { id } = params;
 
