@@ -206,6 +206,9 @@ export async function POST({ params, request }) {
           total: updateData.total
         }
       });
+        // 🔥 CRÍTICO: Procesar la cola inmediatamente después de encolar
+      const { procesarCola } = await import('$lib/server/notificaciones/cola');
+      await procesarCola();
       console.log(`📲 Notificación de confirmación encolada para pedido ${id}`);
     } catch (notifError) {
       console.error('⚠️ Error encolando notificación:', notifError);

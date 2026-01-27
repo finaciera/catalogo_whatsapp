@@ -78,6 +78,30 @@ export async function POST({ params, request }) {
         break;
     }
 
+    const tipoNotif = tiposNotificacion[estadoNuevo];
+      if (tipoNotif) {
+        try {
+          await encolarNotificacion({
+            pedidoId: id,
+            clienteWhatsapp: pedido.cliente_whatsapp,
+            tipo: tipoNotif,
+            prioridad: estadoNuevo === ESTADOS.CANCELADO ? 'alta' : 'media',
+            metadata: { 
+              notas: notas || null,
+              motivo: estadoNuevo === ESTADOS.CANCELADO ? (notas || 'Cancelado por administrador') : null
+            }
+          });
+          
+          // 🔥 NUEVO: Procesar cola inmediatamente
+          const { procesarCola } = await import('$lib/server/notificaciones/cola');
+          await procesarCola();
+          
+          console.log(`✅ Notificación enviada para cambio a ${estadoNuevo}`);
+        } catch (notifError) {
+          console.error('Error en notificación:', notifError);
+        }
+      }
+
     const { data: pedidoActualizado, error: errorUpdate } = await supabaseAdmin
       .from('pedidos')
       .update(updateData)
@@ -111,7 +135,7 @@ export async function POST({ params, request }) {
       [ESTADOS.CANCELADO]: 'pedido_cancelado'
     };
 
-    const tipoNotif = tiposNotificacion[estadoNuevo];
+    //const tipoNotif = tiposNotificacion[estadoNuevo];
     if (tipoNotif) {
       try {
         await encolarNotificacion({

@@ -182,12 +182,25 @@ export async function POST({ params, request }) {
       // NO fallar por esto, pero logear
     }
     
-    // 5.3 Encolar notificación (asíncrono, no bloqueante)
+    // 5.3 Encolar y procesar notificación inmediatamente
     try {
-      await encolarNotificacionWhatsApp(pedidoActualizado, notificacionCliente);
+      const { encolarNotificacion } = await import('$lib/server/notificaciones/cola');
+      
+      await encolarNotificacion({
+        pedidoId: id,
+        clienteWhatsapp: pedidoActualizado.cliente_whatsapp,
+        tipo: notificacionCliente.tipo,
+        prioridad: notificacionCliente.prioridad,
+        metadata: notificacionCliente.motivo ? { motivo: notificacionCliente.motivo } : null
+      });
+      
+    // 🔥 CRÍTICO: Procesar inmediatamente
+      const { procesarCola } = await import('$lib/server/notificaciones/cola');
+      await procesarCola();
+      
+      console.log(`✅ Notificación WhatsApp enviada para pedido ${pedidoActualizado.numero_pedido}`);
     } catch (notifError) {
-      console.error('⚠️ Error encolando notificación:', notifError);
-      // No fallar el proceso principal
+      console.error('⚠️ Error en notificación:', notifError);
     }
     
     // ========================================
