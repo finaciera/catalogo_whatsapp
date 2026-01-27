@@ -47,8 +47,8 @@ Sigue estos pasos para ejecutar el proyecto localmente:
 
 1.  **Clonar el repositorio:**
     ```bash
-    git clone [https://github.com/finaciera/catalogo_whatsapp.git](https://github.com/finaciera/catalogo_whatsapp.git)
-    cd catalogo_whatsapp
+    git clone 
+    cd 
     ```
 
 2.  **Instalar dependencias:**
