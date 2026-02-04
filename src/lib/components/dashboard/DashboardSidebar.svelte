@@ -64,7 +64,8 @@
     
     // Para otros módulos, verificar si la ruta actual comienza con el módulo
     // Ejemplo: /productos, /productos/nuevo, /productos/123/editar → todos activan "Productos"
-    return currentPath.startsWith(item.href);
+    // Asegurar que coincida con límite de palabra (no /producto cuando buscamos /productos)
+    return currentPath === item.href || currentPath.startsWith(item.href + '/');
   }
 </script>
 
