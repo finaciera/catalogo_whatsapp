@@ -1,5 +1,5 @@
 // src/routes/api/cron/+server.js
-// ✅ VERSIÓN MEJORADA con procesamiento de notificaciones y auto-finalización corregida
+// procesamiento de notificaciones y auto-finalización 
 
 import { json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/supabaseServer';
@@ -229,179 +229,12 @@ async function cancelarPedidosAbandonados() {
 }
 
 // ========================================
-// POST - Ejecutar tareas programadas
+// NUEVO: Recordatorios pago rechazado
 // ========================================
-export async function POST({ request }) {
-  try {
-    const authHeader = request.headers.get('authorization');
-    
-    if (authHeader !== `Bearer ${CRON_SECRET}`) {
-      return json(
-        { success: false, error: 'No autorizado' },
-        { status: 401 }
-      );
-    }
-    
-    const { task } = await request.json();
-    
-    let result;
-    
-    switch (task) {
-      case 'auto-finalizar':
-        result = await autoFinalizarPedidos();
-        break;
-        
-      case 'procesar-notificaciones':
-        result = await procesarCola();
-        break;
-        
-      case 'limpiar-notificaciones':
-        result = await limpiarNotificacionesAntiguas();
-        break;
-        
-      case 'recordatorios-pago':
-        result = await recordatoriosPagoPendiente();
-        break;
-        
-      case 'cancelar-abandonados':
-        result = await cancelarPedidosAbandonados();
-        break;
-      case 'recordatorios-rechazo':
-        result = await recordatoriosPagoRechazado();
-        break;
-        
-      case 'all':
-        // Ejecutar todas las tareas en paralelo
-        const [
-          finalizados,
-          notificaciones,
-          limpiezaNotif,
-          recordatorios,
-          abandonados
-        ] = await Promise.allSettled([
-          autoFinalizarPedidos(),
-          procesarCola(),
-          limpiarNotificacionesAntiguas(),
-          recordatoriosPagoPendiente(),
-          cancelarPedidosAbandonados()
-        ]);
-        
-        result = {
-          success: true,
-          tasks: {
-            autoFinalizar: finalizados.status === 'fulfilled' ? finalizados.value : { error: finalizados.reason },
-            procesarNotificaciones: notificaciones.status === 'fulfilled' ? notificaciones.value : { error: notificaciones.reason },
-            limpiarNotificaciones: limpiezaNotif.status === 'fulfilled' ? limpiezaNotif.value : { error: limpiezaNotif.reason },
-            recordatoriosPago: recordatorios.status === 'fulfilled' ? recordatorios.value : { error: recordatorios.reason },
-            cancelarAbandonados: abandonados.status === 'fulfilled' ? abandonados.value : { error: abandonados.reason }
-          },
-          timestamp: new Date().toISOString()
-        };
-        break;
-        
-      default:
-        return json(
-          { 
-            success: false, 
-            error: 'Tarea no reconocida',
-            availableTasks: [
-              'auto-finalizar',
-              'procesar-notificaciones',
-              'limpiar-notificaciones',
-              'recordatorios-pago',
-              'cancelar-abandonados',
-              'all'
-            ]
-          },
-          { status: 400 }
-        );
-    }
-    
-    return json(result);
-    
-  } catch (error) {
-    console.error('Error en cron:', error);
-    return json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
-  }
-}
-
-// ========================================
-// GET - Documentación
-// ========================================
-export async function GET({ url }) {
-  const secret = url.searchParams.get('secret');
-  
-  if (secret !== CRON_SECRET) {
-    return json(
-      { success: false, error: 'No autorizado' },
-      { status: 401 }
-    );
-  }
-  
-  return json({
-    success: true,
-    message: 'Endpoint de cron activo',
-    availableTasks: [
-      {
-        name: 'auto-finalizar',
-        description: 'Finaliza pedidos en estado RECIBIDO después de 24h',
-        frequency: 'Cada 6 horas'
-      },
-      {
-        name: 'procesar-notificaciones',
-        description: 'Procesa cola de notificaciones WhatsApp pendientes',
-        frequency: 'Cada 5 minutos'
-      },
-      {
-        name: 'limpiar-notificaciones',
-        description: 'Limpia notificaciones enviadas (>7 días) y fallidas (>30 días)',
-        frequency: 'Diario'
-      },
-      {
-        name: 'recordatorios-pago',
-        description: 'Envía recordatorios de pago a pedidos confirmados sin comprobante',
-        frequency: 'Cada 12 horas'
-      },
-      {
-        name: 'cancelar-abandonados',
-        description: 'Cancela pedidos en PENDIENTE sin actividad por 7 días',
-        frequency: 'Diario'
-      },
-      {
-        name: 'all',
-        description: 'Ejecuta todas las tareas en paralelo',
-        frequency: 'Manual o cada hora'
-      }
-    ],
-    usage: {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer YOUR_CRON_SECRET',
-        'Content-Type': 'application/json'
-      },
-      body: {
-        task: 'auto-finalizar | procesar-notificaciones | ... | all'
-      }
-    },
-    setupVercel: {
-      'vercel.json': {
-        crons: [
-          {
-            path: '/api/cron',
-            schedule: '*/5 * * * *'
-          }
-        ]
-      },
-      note: 'Configurar CRON_SECRET en variables de entorno'
-    }
-  });
-}
-
 async function recordatoriosPagoRechazado() {
   try {
+    const { encolarNotificacion } = await import('$lib/server/notificaciones/cola');
+    
     const ahora = new Date();
     
     // ✅ RECORDATORIO 12H
@@ -484,4 +317,216 @@ async function recordatoriosPagoRechazado() {
     console.error('Error en recordatorios pago rechazado:', error);
     return { success: false, error: error.message };
   }
+}
+
+// ========================================
+// POST - Ejecutar tareas programadas
+// ========================================
+export async function POST({ request, url }) {
+  try {
+    const authHeader = request.headers.get('authorization');
+    
+    if (authHeader !== `Bearer ${CRON_SECRET}`) {
+      return json(
+        { success: false, error: 'No autorizado' },
+        { status: 401 }
+      );
+    }
+    
+    // Obtener task desde query params o body
+    const taskFromQuery = url.searchParams.get('task');
+    let taskFromBody = null;
+    
+    try {
+      const body = await request.json();
+      taskFromBody = body.task;
+    } catch {
+      // Body vacío o inválido, usar solo query
+    }
+    
+    const task = taskFromQuery || taskFromBody;
+    
+    if (!task) {
+      return json(
+        { 
+          success: false, 
+          error: 'Parámetro "task" requerido',
+          availableTasks: [
+            'auto-finalizar',
+            'procesar-notificaciones',
+            'limpiar-notificaciones',
+            'recordatorios-pago',
+            'recordatorios-rechazo',
+            'cancelar-abandonados',
+            'all'
+          ]
+        },
+        { status: 400 }
+      );
+    }
+    
+    let result;
+    
+    switch (task) {
+      case 'auto-finalizar':
+        result = await autoFinalizarPedidos();
+        break;
+        
+      case 'procesar-notificaciones':
+        result = await procesarCola();
+        break;
+        
+      case 'limpiar-notificaciones':
+        result = await limpiarNotificacionesAntiguas();
+        break;
+        
+      case 'recordatorios-pago':
+        result = await recordatoriosPagoPendiente();
+        break;
+        
+      case 'cancelar-abandonados':
+        result = await cancelarPedidosAbandonados();
+        break;
+        
+      case 'recordatorios-rechazo':
+        result = await recordatoriosPagoRechazado();
+        break;
+        
+      case 'all':
+        // Ejecutar todas las tareas en paralelo
+        const [
+          finalizados,
+          notificaciones,
+          limpiezaNotif,
+          recordatorios,
+          abandonados,
+          rechazados
+        ] = await Promise.allSettled([
+          autoFinalizarPedidos(),
+          procesarCola(),
+          limpiarNotificacionesAntiguas(),
+          recordatoriosPagoPendiente(),
+          cancelarPedidosAbandonados(),
+          recordatoriosPagoRechazado()
+        ]);
+        
+        result = {
+          success: true,
+          tasks: {
+            autoFinalizar: finalizados.status === 'fulfilled' ? finalizados.value : { error: finalizados.reason },
+            procesarNotificaciones: notificaciones.status === 'fulfilled' ? notificaciones.value : { error: notificaciones.reason },
+            limpiarNotificaciones: limpiezaNotif.status === 'fulfilled' ? limpiezaNotif.value : { error: limpiezaNotif.reason },
+            recordatoriosPago: recordatorios.status === 'fulfilled' ? recordatorios.value : { error: recordatorios.reason },
+            cancelarAbandonados: abandonados.status === 'fulfilled' ? abandonados.value : { error: abandonados.reason },
+            recordatoriosRechazo: rechazados.status === 'fulfilled' ? rechazados.value : { error: rechazados.reason }
+          },
+          timestamp: new Date().toISOString()
+        };
+        break;
+        
+      default:
+        return json(
+          { 
+            success: false, 
+            error: 'Tarea no reconocida',
+            availableTasks: [
+              'auto-finalizar',
+              'procesar-notificaciones',
+              'limpiar-notificaciones',
+              'recordatorios-pago',
+              'recordatorios-rechazo',
+              'cancelar-abandonados',
+              'all'
+            ]
+          },
+          { status: 400 }
+        );
+    }
+    
+    return json(result);
+    
+  } catch (error) {
+    console.error('Error en cron:', error);
+    return json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// ========================================
+// GET - Documentación
+// ========================================
+export async function GET({ url }) {
+  const secret = url.searchParams.get('secret');
+  
+  if (secret !== CRON_SECRET) {
+    return json(
+      { success: false, error: 'No autorizado' },
+      { status: 401 }
+    );
+  }
+  
+  return json({
+    success: true,
+    message: 'Endpoint de cron activo',
+    availableTasks: [
+      {
+        name: 'auto-finalizar',
+        description: 'Finaliza pedidos en estado RECIBIDO después de 24h',
+        frequency: 'Cada 6 horas'
+      },
+      {
+        name: 'procesar-notificaciones',
+        description: 'Procesa cola de notificaciones WhatsApp pendientes',
+        frequency: 'Cada 5 minutos'
+      },
+      {
+        name: 'limpiar-notificaciones',
+        description: 'Limpia notificaciones enviadas (>7 días) y fallidas (>30 días)',
+        frequency: 'Diario'
+      },
+      {
+        name: 'recordatorios-pago',
+        description: 'Envía recordatorios de pago a pedidos confirmados sin comprobante',
+        frequency: 'Cada 12 horas'
+      },
+      {
+        name: 'recordatorios-rechazo',
+        description: 'Recordatorios a 12h y cancelación automática a 36h tras rechazo',
+        frequency: 'Cada 2 horas'
+      },
+      {
+        name: 'cancelar-abandonados',
+        description: 'Cancela pedidos en PENDIENTE sin actividad por 7 días',
+        frequency: 'Diario'
+      },
+      {
+        name: 'all',
+        description: 'Ejecuta todas las tareas en paralelo',
+        frequency: 'Manual o cada hora'
+      }
+    ],
+    usage: {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer YOUR_CRON_SECRET',
+        'Content-Type': 'application/json'
+      },
+      body: {
+        task: 'auto-finalizar | procesar-notificaciones | ... | all'
+      }
+    },
+    setupVercel: {
+      'vercel.json': {
+        crons: [
+          {
+            path: '/api/cron?task=procesar-notificaciones',
+            schedule: '*/5 * * * *'
+          }
+        ]
+      },
+      note: 'Configurar CRON_SECRET en variables de entorno'
+    }
+  });
 }
