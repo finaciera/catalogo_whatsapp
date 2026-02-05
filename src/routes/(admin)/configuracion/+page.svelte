@@ -1,3 +1,4 @@
+<!-- src/routes/(admin)/configuracion/+page.svelte -->
 <script>
   import { onMount } from 'svelte';
   import { 
